@@ -2,99 +2,337 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ハッタリ・ナンバー — オンライン心理戦</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>強気サバイバル — 見えない数字のバトル</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#14120f; --panel:#1e1b17; --panel-2:#262119; --accent:#e8a33d; --accent-dim:#a97427;
-    --text:#f1ece1; --muted:#8a8272; --line:#37312a; --alert:#b33a3a; --village:#5c8a6b;
+    --bg-deep:#0F1B16;
+    --felt:#17281F;
+    --felt-line:#2A4636;
+    --cream:#EDE7D9;
+    --muted:#93A69A;
+    --bet:#A63B2D;
+    --bet-bright:#C24732;
+    --fold:#4E6572;
+    --fold-bright:#607C8B;
+    --gold:#D8B65C;
+    --danger:#8B2E2E;
+    --radius:14px;
   }
-  *{ box-sizing:border-box; }
-  html,body{ height:100%; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
   body{
-    margin:0; background: radial-gradient(ellipse 700px 500px at 50% -10%, #262019 0%, var(--bg) 60%);
-    color:var(--text); font-family:'Shippori Mincho',serif; display:flex; align-items:center; justify-content:center;
-    min-height:100vh; padding:24px 16px;
+    background:
+      radial-gradient(ellipse at 50% -10%, #1D3428 0%, var(--bg-deep) 55%);
+    color:var(--cream);
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
   }
-  .mono{ font-family:'JetBrains Mono',monospace; }
-  .stage{ width:100%; max-width:440px; }
-  .file{ background:var(--panel); border:1px solid var(--line); border-radius:3px; box-shadow:0 30px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03); position:relative; overflow:hidden; }
-  .file::before{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%, rgba(232,163,61,0.09), transparent 55%); pointer-events:none; }
-  .file-body{ padding:32px 28px; position:relative; }
-  .kicker{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.14em; color:var(--accent-dim); margin:0 0 6px; }
-  h1{ font-size:26px; font-weight:800; margin:0 0 8px; line-height:1.35; }
-  h2{ font-size:20px; font-weight:700; margin:0 0 10px; line-height:1.4; }
-  p{ margin:0 0 14px; color:var(--text); line-height:1.9; font-size:15px; }
-  .muted{ color:var(--muted); font-size:13.5px; }
-  .divider{ height:1px; background:var(--line); margin:20px 0; }
-  .field{ margin-bottom:16px; }
-  .field label{ display:block; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; color:var(--muted); margin-bottom:6px; }
-  input[type=text], input[type=number]{
-    width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:2px; color:var(--text);
-    font-family:'Shippori Mincho',serif; font-size:15px; padding:10px 12px; outline:none;
+  #app{
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    padding:20px 18px 40px;
+    display:flex;
+    flex-direction:column;
   }
-  input.mono-input{ font-family:'JetBrains Mono',monospace; font-size:20px; text-align:center; letter-spacing:0.1em; }
-  input:focus{ border-color:var(--accent-dim); }
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; width:100%; background:var(--accent); color:#1a1508;
-    border:none; border-radius:2px; padding:13px 18px; font-family:'JetBrains Mono',monospace; font-size:13.5px;
-    letter-spacing:0.04em; font-weight:700; cursor:pointer; transition:transform .12s,background .12s;
+  .brand{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:18px;
   }
-  .btn:hover{ background:#f0af52; }
-  .btn:active{ transform:scale(0.98); }
-  .btn.secondary{ background:transparent; color:var(--text); border:1px solid var(--line); }
-  .btn.secondary:hover{ border-color:var(--accent-dim); background:rgba(232,163,61,0.06); }
-  .btn.danger{ background:var(--alert); color:#fff; }
-  .btn.danger:hover{ background:#c94747; }
-  .btn:disabled{ opacity:0.35; cursor:not-allowed; }
-  .btn-row{ display:flex; gap:10px; margin-top:14px; }
-  .btn-row .btn{ flex:1; }
-  .tabs{ display:flex; gap:8px; margin-bottom:20px; }
-  .tab{ flex:1; text-align:center; padding:10px; border:1px solid var(--line); border-radius:2px; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--muted); }
-  .tab.active{ border-color:var(--accent); color:var(--accent); }
-  .errmsg{ color:var(--alert); font-size:13px; margin:-6px 0 14px; font-family:'JetBrains Mono',monospace; }
-
-  .roomcode{ text-align:center; margin:6px 0 20px; }
-  .roomcode .code{ font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; letter-spacing:0.18em; color:var(--accent); }
-  .roomcode .tag{ font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.1em; }
-
-  .plist{ display:flex; flex-direction:column; gap:8px; margin:14px 0; }
-  .prow{ display:flex; align-items:center; justify-content:space-between; background:var(--panel-2); border:1px solid var(--line); padding:10px 14px; border-radius:2px; font-size:14.5px; }
-  .prow.turn{ border-color:var(--accent); background:rgba(232,163,61,0.08); }
-  .prow.dead{ opacity:0.4; text-decoration:line-through; }
-  .hearts{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--alert); letter-spacing:1px; }
-
-  .mycard{ background:var(--panel-2); border:1px dashed var(--line); border-radius:2px; padding:20px 18px; text-align:center; margin:16px 0; }
-  .mycard .label{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:0.1em; margin-bottom:8px; }
-  .mycard .num{ font-size:44px; font-weight:800; color:var(--accent); font-family:'JetBrains Mono',monospace; }
-
-  .bidbox{ background:var(--panel-2); border:1px solid var(--line); border-radius:2px; padding:16px; text-align:center; margin:14px 0; }
-  .bidbox .who{ font-size:12px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-bottom:4px; }
-  .bidbox .val{ font-size:26px; font-weight:800; }
-
-  .log{ max-height:130px; overflow-y:auto; border-top:1px solid var(--line); padding-top:10px; margin-top:16px; }
-  .log div{ font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--muted); margin-bottom:6px; line-height:1.6; }
-
-  .verdict{ text-align:center; padding:6px 0 4px; }
-  .verdict .side{ font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.12em; color:var(--muted); margin-bottom:8px; }
-  .verdict h2{ font-size:26px; margin-bottom:6px; color:var(--village); }
-
-  .hidden{ display:none !important; }
-  .footer-note{ text-align:center; margin-top:16px; color:var(--muted); font-size:11.5px; font-family:'JetBrains Mono',monospace; letter-spacing:0.04em; }
+  .brand h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:22px;
+    letter-spacing:0.01em;
+    margin:0;
+  }
+  .brand h1 span{color:var(--gold);}
+  .badge{
+    font-size:12px;
+    color:var(--muted);
+    border:1px solid var(--felt-line);
+    padding:4px 10px;
+    border-radius:20px;
+    font-variant-numeric:tabular-nums;
+  }
+  .panel{
+    background:var(--felt);
+    border:1px solid var(--felt-line);
+    border-radius:var(--radius);
+    padding:22px 18px;
+    margin-bottom:14px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  input[type=text]{
+    width:100%;
+    background:var(--bg-deep);
+    border:1px solid var(--felt-line);
+    color:var(--cream);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:17px;
+    padding:12px 14px;
+    border-radius:10px;
+    outline:none;
+  }
+  input[type=text]:focus{border-color:var(--gold);}
+  input[type=text]::placeholder{color:#5C6E64;}
+  select{
+    width:100%;
+    background:var(--bg-deep);
+    border:1px solid var(--felt-line);
+    color:var(--cream);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:16px;
+    padding:11px 14px;
+    border-radius:10px;
+    outline:none;
+  }
+  button{
+    font-family:'Space Grotesk',sans-serif;
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+    border-radius:10px;
+    transition:transform .08s ease, filter .12s ease;
+  }
+  button:active{transform:scale(0.97);}
+  button:disabled{opacity:0.35;cursor:not-allowed;}
+  .btn-primary{
+    width:100%;
+    background:var(--gold);
+    color:#1B1409;
+    font-size:16px;
+    padding:14px;
+  }
+  .btn-primary:not(:disabled):hover{filter:brightness(1.08);}
+  .btn-ghost{
+    width:100%;
+    background:transparent;
+    border:1px solid var(--felt-line);
+    color:var(--cream);
+    font-size:14px;
+    padding:11px;
+  }
+  .row2{display:flex;gap:10px;}
+  .row2>*{flex:1;}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .tab{
+    flex:1;
+    text-align:center;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--felt-line);
+    color:var(--muted);
+    font-size:14px;
+    cursor:pointer;
+  }
+  .tab.active{
+    background:var(--bg-deep);
+    color:var(--gold);
+    border-color:var(--gold);
+  }
+  .error-msg{
+    color:#E08B7A;
+    font-size:13px;
+    margin-top:-6px;
+    margin-bottom:12px;
+  }
+  .room-code{
+    font-family:'Fraunces',serif;
+    font-size:34px;
+    letter-spacing:0.12em;
+    color:var(--gold);
+    text-align:center;
+    margin:4px 0 2px;
+  }
+  .room-code-label{
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    margin-bottom:18px;
+  }
+  .player-list{list-style:none;margin:0;padding:0;}
+  .player-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid var(--felt-line);
+  }
+  .player-row:last-child{border-bottom:none;}
+  .player-name{
+    font-size:15px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .you-tag{
+    font-size:10.5px;
+    color:#1B1409;
+    background:var(--gold);
+    padding:2px 6px;
+    border-radius:6px;
+  }
+  .host-tag{
+    font-size:10.5px;
+    color:var(--gold);
+    border:1px solid var(--gold);
+    padding:1px 6px;
+    border-radius:6px;
+  }
+  .dead-tag{color:#5C6E64;font-size:13px;}
+  .hearts{font-size:14px;letter-spacing:2px;color:var(--danger);white-space:nowrap;}
+  .hearts .empty{color:#3A4A41;}
+  .section-title{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:none;
+    margin-bottom:10px;
+  }
+  .stage{
+    text-align:center;
+    padding:34px 16px 30px;
+  }
+  .stage .vs-label{
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .opponent-name{
+    font-size:16px;
+    color:var(--cream);
+    margin-bottom:14px;
+  }
+  .big-number{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:88px;
+    line-height:1;
+    color:var(--gold);
+    margin-bottom:8px;
+    font-variant-numeric:tabular-nums;
+  }
+  .big-number-hint{
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:26px;
+  }
+  .choice-row{display:flex;gap:12px;}
+  .choice-btn{
+    flex:1;
+    padding:18px 10px;
+    border-radius:12px;
+    font-size:17px;
+    border:1.5px solid transparent;
+  }
+  .choice-fold{
+    background:rgba(78,101,114,0.18);
+    border-color:var(--fold);
+    color:var(--cream);
+  }
+  .choice-fold:not(:disabled):active{background:var(--fold);}
+  .choice-bet{
+    background:rgba(166,59,45,0.18);
+    border-color:var(--bet);
+    color:var(--cream);
+  }
+  .choice-bet:not(:disabled):active{background:var(--bet);}
+  .choice-btn.selected.choice-fold{background:var(--fold);border-color:var(--fold-bright);}
+  .choice-btn.selected.choice-bet{background:var(--bet);border-color:var(--bet-bright);}
+  .waiting-note{
+    margin-top:16px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .match-card{
+    background:var(--bg-deep);
+    border:1px solid var(--felt-line);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:8px;
+  }
+  .match-top{
+    display:flex;
+    justify-content:space-between;
+    font-size:13.5px;
+    margin-bottom:4px;
+  }
+  .match-top .num{font-variant-numeric:tabular-nums;color:var(--gold);font-weight:600;}
+  .match-mid{font-size:11.5px;color:var(--muted);text-align:center;margin:2px 0;}
+  .result-line{
+    font-size:13px;
+    margin-top:6px;
+    padding-top:6px;
+    border-top:1px dashed var(--felt-line);
+  }
+  .tag-bet{color:var(--bet-bright);}
+  .tag-fold{color:var(--fold-bright);}
+  .tag-win{color:var(--gold);font-weight:600;}
+  .tag-lose{color:#8B5A4F;}
+  .spectator-note{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    padding:10px 0 4px;
+  }
+  .winner-box{
+    text-align:center;
+    padding:30px 10px;
+  }
+  .winner-box .crown{font-size:44px;margin-bottom:10px;}
+  .winner-box .name{
+    font-family:'Fraunces',serif;
+    font-size:30px;
+    color:var(--gold);
+    margin-bottom:6px;
+  }
+  .winner-box .sub{color:var(--muted);font-size:13px;margin-bottom:24px;}
+  .footer-note{
+    text-align:center;
+    color:#4A594F;
+    font-size:11px;
+    margin-top:auto;
+    padding-top:24px;
+  }
+  .connecting{
+    text-align:center;
+    color:var(--muted);
+    padding:60px 0;
+    font-size:14px;
+  }
+  .link-btn{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-size:12.5px;
+    text-decoration:underline;
+    padding:0;
+  }
 </style>
 </head>
 <body>
-<div class="stage">
-  <div class="file"><div class="file-body" id="app"></div></div>
-  <div class="footer-note">ONLINE PSYCH GAME — ハッタリ・ナンバー</div>
-</div>
+<div id="app"><div class="connecting">読み込み中…</div></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 <script>
-/* ---------------- Firebase ---------------- */
+/* ------------------------------------------------------------------ */
+/* Firebase setup                                                     */
+/* ------------------------------------------------------------------ */
 const firebaseConfig = {
   apiKey: "AIzaSyDWxhILNkj0RrOV248Bh2zoFZfNq2G-3N0",
   authDomain: "zoukin-kart.firebaseapp.com",
@@ -107,398 +345,548 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ---------------- Local state ---------------- */
-let S = {
-  screen: 'home',        // home | lobby | playing | finished
-  authTab: 'create',
-  roomCode: null,
-  playerId: null,
-  playerName: '',
-  room: null,             // live snapshot data
-  unsub: null,
-  errorMsg: '',
-  bidInput: '',
-};
+/* ------------------------------------------------------------------ */
+/* Local identity                                                     */
+/* ------------------------------------------------------------------ */
+function uuid(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+    const r = Math.random()*16|0;
+    const v = c==='x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+let playerId = localStorage.getItem('ns_playerId');
+if(!playerId){ playerId = uuid(); localStorage.setItem('ns_playerId', playerId); }
+let savedName = localStorage.getItem('ns_playerName') || '';
+let savedRoom = localStorage.getItem('ns_roomId') || '';
+
+/* ------------------------------------------------------------------ */
+/* State                                                               */
+/* ------------------------------------------------------------------ */
+let roomId = null;
+let roomRef = null;
+let unsub = null;
+let state = null;      // last snapshot data
+let resolving = false; // local lock to avoid double-resolve from host client
+let localChoice = {};  // pairKey -> chosen value (optimistic UI)
+let entryMode = 'create'; // 'create' | 'join'
+let entryError = '';
 
 const app = document.getElementById('app');
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-function uid(){
-  return 'p' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+function esc(s){
+  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-function genCode(){
-  let c=''; for(let i=0;i<4;i++) c += CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];
-  return c;
-}
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
-}
-
-function render(){
-  if(S.screen==='home') renderHome();
-  else if(S.screen==='lobby') renderLobby();
-  else if(S.screen==='playing') renderPlaying();
-  else if(S.screen==='finished') renderFinished();
-}
-
-/* ---------------- HOME ---------------- */
-function renderHome(){
-  app.innerHTML = `
-    <p class="kicker">FILE No.00 — 起動</p>
-    <h1>ハッタリ・ナンバー</h1>
-    <p>自分だけの秘密の数字を持ち寄り、全員の合計を「これ以上ある」とハッタリで宣言していく心理戦。宣言を信じるか、「ウソだ！」と見破るか——賢く読み、大胆に騙す。</p>
-    <div class="divider"></div>
-    <div class="tabs">
-      <div class="tab ${S.authTab==='create'?'active':''}" id="tabCreate">部屋を作る</div>
-      <div class="tab ${S.authTab==='join'?'active':''}" id="tabJoin">部屋に入る</div>
-    </div>
-    <div class="field">
-      <label>あなたの名前</label>
-      <input type="text" id="nameInput" maxlength="10" placeholder="なまえ" value="${escapeHtml(S.playerName)}">
-    </div>
-    ${S.authTab==='join' ? `
-    <div class="field">
-      <label>部屋コード（4桁）</label>
-      <input type="text" id="codeInput" class="mono-input" maxlength="4" placeholder="XXXX">
-    </div>` : ''}
-    ${S.errorMsg ? `<div class="errmsg">${escapeHtml(S.errorMsg)}</div>` : ''}
-    <button class="btn" id="goBtn">${S.authTab==='create' ? '部屋を作成する →' : '入室する →'}</button>
-  `;
-  document.getElementById('tabCreate').onclick = ()=>{ S.authTab='create'; S.errorMsg=''; render(); };
-  document.getElementById('tabJoin').onclick = ()=>{ S.authTab='join'; S.errorMsg=''; render(); };
-  document.getElementById('nameInput').oninput = e=> S.playerName = e.target.value;
-  const codeEl = document.getElementById('codeInput');
-  if(codeEl) codeEl.oninput = e=> e.target.value = e.target.value.toUpperCase();
-  document.getElementById('goBtn').onclick = ()=>{
-    S.errorMsg='';
-    const name = (S.playerName||'').trim();
-    if(!name){ S.errorMsg='名前を入力してください'; render(); return; }
-    if(S.authTab==='create') createRoom(name);
-    else{
-      const code = (document.getElementById('codeInput').value||'').trim().toUpperCase();
-      if(code.length!==4){ S.errorMsg='4桁のコードを入力してください'; render(); return; }
-      joinRoom(code, name);
-    }
-  };
-}
-
-async function createRoom(name){
-  const code = genCode();
-  const pid = uid();
-  const data = {
-    createdAt: Date.now(),
-    status: 'lobby',
-    order: [pid],
-    turnIndex: 0,
-    currentBid: null,
-    round: 0,
-    winner: null,
-    log: [`部屋 ${code} が作成されました`],
-    players: { [pid]: { name, lives: 3, number: 0, eliminated: false } }
-  };
-  try{
-    await db.collection('rooms').doc(code).set(data);
-    S.roomCode = code; S.playerId = pid; S.playerName = name;
-    subscribeRoom(code);
-  }catch(e){
-    S.errorMsg = '作成に失敗しました: ' + e.message;
-    render();
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
   }
+  return a;
+}
+function makeRoomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
+  let s='';
+  for(let i=0;i<4;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function hearts(life, max){
+  max = Math.max(max, life);
+  let h='<span class="hearts">';
+  for(let i=0;i<max;i++){
+    h += i < life ? '♥' : '<span class="empty">♥</span>';
+  }
+  return h + '</span>';
+}
+
+/* ------------------------------------------------------------------ */
+/* Room actions                                                        */
+/* ------------------------------------------------------------------ */
+async function createRoom(name){
+  name = name.trim();
+  if(!name){ entryError='名前を入力してください'; render(); return; }
+  let code, ok=false, tries=0;
+  while(!ok && tries<8){
+    code = makeRoomCode();
+    const snap = await db.collection('rooms').doc(code).get();
+    if(!snap.exists) ok = true;
+    tries++;
+  }
+  if(!ok){ entryError='部屋の作成に失敗しました。もう一度お試しください'; render(); return; }
+  const data = {
+    hostId: playerId,
+    phase: 'lobby',
+    startingLife: 3,
+    roundNumber: 0,
+    pairs: {},
+    spectatorId: null,
+    winnerId: null,
+    players: {
+      [playerId]: { name, life: 0, alive: true, order: 0 }
+    },
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  await db.collection('rooms').doc(code).set(data);
+  localStorage.setItem('ns_playerName', name);
+  localStorage.setItem('ns_roomId', code);
+  attachRoom(code);
 }
 
 async function joinRoom(code, name){
+  code = code.trim().toUpperCase();
+  name = name.trim();
+  if(!code){ entryError='部屋コードを入力してください'; render(); return; }
+  if(!name){ entryError='名前を入力してください'; render(); return; }
   const ref = db.collection('rooms').doc(code);
-  try{
-    const snap = await ref.get();
-    if(!snap.exists){ S.errorMsg='その部屋は見つかりません'; render(); return; }
-    const data = snap.data();
-    if(data.status !== 'lobby'){ S.errorMsg='この部屋はすでに開始しています'; render(); return; }
-    const pid = uid();
-    await ref.update({
-      [`players.${pid}`]: { name, lives:3, number:0, eliminated:false },
-      order: firebase.firestore.FieldValue.arrayUnion(pid),
-      log: firebase.firestore.FieldValue.arrayUnion(`${name} が入室しました`)
-    });
-    S.roomCode = code; S.playerId = pid; S.playerName = name;
-    subscribeRoom(code);
-  }catch(e){
-    S.errorMsg = '入室に失敗しました: ' + e.message;
-    render();
+  const snap = await ref.get();
+  if(!snap.exists){ entryError='その部屋は見つかりません'; render(); return; }
+  const data = snap.data();
+  if(data.players[playerId]){
+    localStorage.setItem('ns_playerName', name);
+    localStorage.setItem('ns_roomId', code);
+    attachRoom(code);
+    return;
   }
+  if(data.phase !== 'lobby'){ entryError='この部屋はすでにゲーム中です'; render(); return; }
+  const order = Object.keys(data.players).length;
+  await ref.update({ [`players.${playerId}`]: { name, life: 0, alive: true, order } });
+  localStorage.setItem('ns_playerName', name);
+  localStorage.setItem('ns_roomId', code);
+  attachRoom(code);
 }
 
-function subscribeRoom(code){
-  if(S.unsub) S.unsub();
-  S.unsub = db.collection('rooms').doc(code).onSnapshot(snap=>{
-    if(!snap.exists){ return; }
-    S.room = snap.data();
-    if(S.room.status==='lobby') S.screen='lobby';
-    else if(S.room.status==='playing') S.screen='playing';
-    else if(S.room.status==='finished') S.screen='finished';
+function leaveRoom(){
+  if(unsub) unsub();
+  unsub = null;
+  roomRef = null;
+  roomId = null;
+  state = null;
+  localStorage.removeItem('ns_roomId');
+  render();
+}
+
+function attachRoom(code){
+  if(unsub) unsub();
+  roomId = code;
+  roomRef = db.collection('rooms').doc(code);
+  unsub = roomRef.onSnapshot(snap=>{
+    if(!snap.exists){
+      leaveRoom();
+      return;
+    }
+    state = snap.data();
+    localChoice = {};
+    maybeResolve();
     render();
+  }, err=>{
+    console.error(err);
   });
 }
 
-/* ---------------- LOBBY ---------------- */
-function renderLobby(){
-  const r = S.room;
-  const players = Object.entries(r.players || {});
-  app.innerHTML = `
-    <p class="kicker">FILE No.01 — 待機室</p>
-    <div class="roomcode">
-      <div class="tag">ROOM CODE</div>
-      <div class="code">${S.roomCode}</div>
-      <div class="tag" style="margin-top:6px;">このコードを他の人に伝えてください</div>
-    </div>
-    <div class="divider"></div>
-    <p class="muted">参加者（${players.length}人）</p>
-    <div class="plist">
-      ${players.map(([id,p])=>`<div class="prow">${escapeHtml(p.name)}${id===S.playerId?' (あなた)':''}</div>`).join('')}
-    </div>
-    <button class="btn" id="startBtn" ${players.length<2?'disabled':''}>ゲーム開始 →</button>
-    ${players.length<2 ? '<p class="muted" style="text-align:center;margin-top:10px;">2人以上で開始できます</p>' : ''}
-  `;
-  const startBtn = document.getElementById('startBtn');
-  if(startBtn) startBtn.onclick = startGame;
+async function setStartingLife(n){
+  await roomRef.update({ startingLife: n });
 }
 
 async function startGame(){
-  const ref = db.collection('rooms').doc(S.roomCode);
-  try{
-    await db.runTransaction(async (t)=>{
-      const snap = await t.get(ref);
-      const data = snap.data();
-      const order = data.order.filter(id => data.players[id]);
-      const update = {
-        status: 'playing',
-        order,
-        turnIndex: 0,
-        currentBid: null,
-        round: 1,
-        winner: null,
-        log: firebase.firestore.FieldValue.arrayUnion('--- ラウンド1、開始 ---')
-      };
-      order.forEach(id=>{
-        update[`players.${id}.number`] = 1 + Math.floor(Math.random()*9);
-        update[`players.${id}.lives`] = 3;
-        update[`players.${id}.eliminated`] = false;
-      });
-      t.update(ref, update);
-    });
-  }catch(e){ console.error(e); }
+  if(!state) return;
+  const players = {...state.players};
+  Object.keys(players).forEach(id=>{
+    players[id] = {...players[id], life: state.startingLife, alive: true};
+  });
+  await roomRef.update({ players });
+  await startRound();
 }
 
-/* ---------------- helpers for gameplay ---------------- */
-function aliveOrder(r){
-  return r.order.filter(id => r.players[id] && !r.players[id].eliminated);
-}
-function nextAliveIndexInOrder(order, players, fromIdx){
-  const n = order.length;
-  for(let step=1; step<=n; step++){
-    const idx = (fromIdx + step) % n;
-    if(players[order[idx]] && !players[order[idx]].eliminated) return idx;
-  }
-  return fromIdx;
-}
-
-/* ---------------- PLAYING ---------------- */
-function renderPlaying(){
-  const r = S.room;
-  const order = r.order;
-  const me = r.players[S.playerId];
-  const currentTurnId = order[r.turnIndex];
-  const isMyTurn = currentTurnId === S.playerId;
-  const aliveCount = order.filter(id=>r.players[id] && !r.players[id].eliminated).length;
-  const maxBid = 9 * aliveCount;
-  const minBid = r.currentBid ? r.currentBid.value + 1 : 1;
-
-  const rows = order.map(id=>{
-    const p = r.players[id];
-    if(!p) return '';
-    const isTurn = id===currentTurnId && !p.eliminated;
-    return `<div class="prow ${isTurn?'turn':''} ${p.eliminated?'dead':''}">
-      <span>${escapeHtml(p.name)}${id===S.playerId?' (あなた)':''}${isTurn?' — 番':''}</span>
-      <span class="hearts">${'♥'.repeat(Math.max(p.lives,0))}${p.eliminated?' OUT':''}</span>
-    </div>`;
-  }).join('');
-
-  const bidHtml = r.currentBid ? `
-    <div class="bidbox">
-      <div class="who">現在の宣言 — ${escapeHtml(r.currentBid.byName)}</div>
-      <div class="val">合計 ${r.currentBid.value} 以上</div>
-    </div>` : `
-    <div class="bidbox">
-      <div class="who">まだ宣言はありません</div>
-      <div class="val mono">最初の宣言を待っています</div>
-    </div>`;
-
-  const logHtml = (r.log||[]).slice(-8).map(l=>`<div>${escapeHtml(l)}</div>`).join('');
-
-  app.innerHTML = `
-    <p class="kicker">ROUND ${r.round}</p>
-    <h2>ハッタリ・ナンバー</h2>
-    <div class="mycard">
-      <div class="label">あなたの数字（他人には見せないで）</div>
-      <div class="num">${me ? me.number : '-'}</div>
-    </div>
-    ${bidHtml}
-    <div class="plist">${rows}</div>
-    <div id="actionArea"></div>
-    <div class="log">${logHtml}</div>
-  `;
-
-  const actionArea = document.getElementById('actionArea');
-  if(!me || me.eliminated){
-    actionArea.innerHTML = `<p class="muted" style="text-align:center;">あなたは脱落しています。観戦を続けられます。</p>`;
+async function startRound(){
+  const snap = await roomRef.get();
+  const data = snap.data();
+  const alive = Object.entries(data.players).filter(([id,p])=>p.alive).map(([id])=>id);
+  if(alive.length <= 1){
+    await roomRef.update({ phase:'gameover', winnerId: alive[0]||null });
     return;
   }
-  if(!isMyTurn){
-    actionArea.innerHTML = `<p class="muted" style="text-align:center;">${escapeHtml(r.players[currentTurnId].name)} さんの番です。お待ちください。</p>`;
-    return;
+  const shuffled = shuffle(alive);
+  let spectatorId = null;
+  if(shuffled.length % 2 === 1){
+    spectatorId = shuffled.pop();
   }
-  actionArea.innerHTML = `
-    <div class="field">
-      <label>宣言する合計値（${minBid} 〜 ${maxBid}）</label>
-      <input type="number" id="bidNum" class="mono-input" min="${minBid}" max="${maxBid}" placeholder="${minBid}">
-    </div>
-    <button class="btn" id="bidBtn">この数字を宣言する</button>
-    <div class="btn-row">
-      <button class="btn danger" id="challengeBtn" ${r.currentBid ? '' : 'disabled'}>「ウソだ！」と見破る</button>
-    </div>
-  `;
-  document.getElementById('bidBtn').onclick = ()=> placeBid(minBid, maxBid);
-  document.getElementById('challengeBtn').onclick = challenge;
+  const pairs = {};
+  for(let i=0;i<shuffled.length;i+=2){
+    pairs['pair'+(i/2)] = {
+      p1: shuffled[i],
+      p2: shuffled[i+1],
+      p1Number: 1+Math.floor(Math.random()*100),
+      p2Number: 1+Math.floor(Math.random()*100),
+      p1Choice: null,
+      p2Choice: null,
+      result: null
+    };
+  }
+  await roomRef.update({
+    phase: 'choosing',
+    roundNumber: firebase.firestore.FieldValue.increment(1),
+    pairs,
+    spectatorId,
+    winnerId: null
+  });
 }
 
-async function placeBid(minBid, maxBid){
-  const val = parseInt(document.getElementById('bidNum').value, 10);
-  if(!val || val < minBid || val > maxBid){
-    alert(`宣言は ${minBid} から ${maxBid} の間で入力してください`);
-    return;
+async function nextRound(){
+  if(state.winnerId){
+    await roomRef.update({ phase: 'gameover' });
+  } else {
+    await startRound();
   }
-  const ref = db.collection('rooms').doc(S.roomCode);
-  try{
-    await db.runTransaction(async (t)=>{
-      const snap = await t.get(ref);
-      const data = snap.data();
-      const order = data.order;
-      if(order[data.turnIndex] !== S.playerId) return;
-      const nextIdx = nextAliveIndexInOrder(order, data.players, data.turnIndex);
-      const myName = data.players[S.playerId].name;
-      t.update(ref, {
-        currentBid: { value: val, by: S.playerId, byName: myName },
-        turnIndex: nextIdx,
-        log: firebase.firestore.FieldValue.arrayUnion(`${myName}: 「合計 ${val} 以上」`)
-      });
-    });
-  }catch(e){ console.error(e); }
 }
 
-async function challenge(){
-  const ref = db.collection('rooms').doc(S.roomCode);
+async function submitChoice(pairKey, slot, choice){
+  localChoice[pairKey] = choice;
+  render();
+  await roomRef.update({ [`pairs.${pairKey}.${slot}Choice`]: choice });
+}
+
+function allPairsDone(pairs){
+  const keys = Object.keys(pairs);
+  if(keys.length===0) return false;
+  return keys.every(k => pairs[k].p1Choice && pairs[k].p2Choice);
+}
+
+async function maybeResolve(){
+  if(!state) return;
+  if(state.hostId !== playerId) return;
+  if(state.phase !== 'choosing') return;
+  if(!allPairsDone(state.pairs)) return;
+  if(resolving) return;
+  resolving = true;
   try{
-    await db.runTransaction(async (t)=>{
-      const snap = await t.get(ref);
+    await db.runTransaction(async tx=>{
+      const snap = await tx.get(roomRef);
       const data = snap.data();
-      const order = data.order;
-      if(order[data.turnIndex] !== S.playerId) return;
-      if(!data.currentBid) return;
-
-      const aliveIds = order.filter(id => data.players[id] && !data.players[id].eliminated);
-      const total = aliveIds.reduce((sum,id)=> sum + (data.players[id].number||0), 0);
-      const bid = data.currentBid;
-      const challengerId = S.playerId;
-      const bidderId = bid.by;
-      const bidderTrue = total >= bid.value;
-      const loserId = bidderTrue ? challengerId : bidderId;
-      const loserName = data.players[loserId].name;
-
-      const update = {};
-      const newLives = Math.max((data.players[loserId].lives||0) - 1, 0);
-      update[`players.${loserId}.lives`] = newLives;
-      const eliminated = newLives <= 0;
-      update[`players.${loserId}.eliminated`] = eliminated;
-
-      const logMsg = `${data.players[challengerId].name} が「ウソだ！」→ 実際の合計は${total}。${bidderTrue ? '宣言は本当だった' : '宣言はハッタリだった'}。${loserName} がライフを失った（残り${newLives}）`;
-
-      const stillAlive = order.filter(id=>{
-        if(id===loserId) return !eliminated;
-        return data.players[id] && !data.players[id].eliminated;
-      });
-
-      if(stillAlive.length <= 1){
-        update.status = 'finished';
-        update.winner = stillAlive[0] || null;
-        update.log = firebase.firestore.FieldValue.arrayUnion(logMsg, '--- ゲーム終了 ---');
-        t.update(ref, update);
-        return;
-      }
-
-      order.forEach(id=>{
-        if(data.players[id] && !(id===loserId && eliminated)){
-          update[`players.${id}.number`] = 1 + Math.floor(Math.random()*9);
+      if(data.phase !== 'choosing') return;
+      const pairs = data.pairs;
+      const players = data.players;
+      Object.keys(pairs).forEach(key=>{
+        const pair = pairs[key];
+        if(pair.result) return;
+        const p1bet = pair.p1Choice === 'bet';
+        const p2bet = pair.p2Choice === 'bet';
+        let winner=null, loser=null, draw=false;
+        if(p1bet && p2bet){
+          if(pair.p1Number > pair.p2Number){ winner=pair.p1; loser=pair.p2; }
+          else if(pair.p2Number > pair.p1Number){ winner=pair.p2; loser=pair.p1; }
+          else { draw = true; }
+        } else if(p1bet && !p2bet){
+          winner = pair.p1; loser = pair.p2;
+        } else if(!p1bet && p2bet){
+          winner = pair.p2; loser = pair.p1;
+        } else {
+          draw = true;
         }
+        if(!draw){
+          const newLife = Math.max(0, players[loser].life - 1);
+          players[loser].life = newLife;
+          if(newLife === 0) players[loser].alive = false;
+        }
+        pair.result = { winner, loser, draw };
       });
-      update.currentBid = null;
-      update.round = (data.round||1) + 1;
-
-      const loserIdx = order.indexOf(loserId);
-      let nextIdx;
-      if(!eliminated){
-        nextIdx = loserIdx;
-      } else {
-        nextIdx = nextAliveIndexInOrder(order, {...data.players, [loserId]:{...data.players[loserId], eliminated:true}}, loserIdx);
-      }
-      update.turnIndex = nextIdx;
-      update.log = firebase.firestore.FieldValue.arrayUnion(logMsg, `--- ラウンド${(data.round||1)+1}、開始 ---`);
-
-      t.update(ref, update);
+      const aliveIds = Object.entries(players).filter(([id,p])=>p.alive).map(([id])=>id);
+      const winnerId = aliveIds.length === 1 ? aliveIds[0] : null;
+      tx.update(roomRef, { pairs, players, phase: 'resolved', winnerId });
     });
-  }catch(e){ console.error(e); }
+  } finally {
+    resolving = false;
+  }
 }
 
-/* ---------------- FINISHED ---------------- */
-function renderFinished(){
-  const r = S.room;
-  const winner = r.winner ? r.players[r.winner] : null;
-  app.innerHTML = `
-    <p class="kicker">FILE No.02 — 決着</p>
-    <div class="verdict">
-      <div class="side">GAME OVER</div>
-      <h2>${winner ? escapeHtml(winner.name) + ' の勝利！' : '決着つかず'}</h2>
-      <p class="muted">最後まで生き残り、ハッタリと読み合いを制しました。</p>
+/* ------------------------------------------------------------------ */
+/* Rendering                                                            */
+/* ------------------------------------------------------------------ */
+window.__ns = {
+  setEntryMode(m){ entryMode = m; entryError=''; render(); },
+  doCreate(){
+    const name = document.getElementById('nameInput').value;
+    createRoom(name);
+  },
+  doJoin(){
+    const code = document.getElementById('codeInput').value;
+    const name = document.getElementById('nameInput').value;
+    joinRoom(code, name);
+  },
+  leaveRoom,
+  setLife(v){ setStartingLife(parseInt(v,10)); },
+  startGame,
+  nextRound,
+  submitChoice,
+  copyCode(){
+    if(roomId){
+      navigator.clipboard && navigator.clipboard.writeText(roomId).catch(()=>{});
+    }
+  },
+  playAgain: async function(){
+    const players = {...state.players};
+    Object.keys(players).forEach(id=>{
+      players[id] = {...players[id], life:0, alive:true};
+    });
+    await roomRef.update({ phase:'lobby', players, pairs:{}, winnerId:null, roundNumber:0, spectatorId:null });
+  }
+};
+
+function render(){
+  if(!roomId){
+    renderEntry();
+    return;
+  }
+  if(!state){
+    app.innerHTML = '<div class="connecting">部屋に接続しています…</div>';
+    return;
+  }
+  if(state.phase === 'lobby') renderLobby();
+  else if(state.phase === 'choosing') renderChoosing();
+  else if(state.phase === 'resolved') renderResolved();
+  else if(state.phase === 'gameover') renderGameOver();
+}
+
+function header(sub){
+  return `
+    <div class="brand">
+      <h1>強気<span>サバイバル</span></h1>
+      ${roomId ? `<div class="badge">部屋 ${esc(roomId)}</div>` : ''}
     </div>
-    <div class="log">${(r.log||[]).slice(-10).map(l=>`<div>${escapeHtml(l)}</div>`).join('')}</div>
-    <button class="btn" id="lobbyBtn" style="margin-top:16px;">ロビーに戻ってもう一度</button>
   `;
-  document.getElementById('lobbyBtn').onclick = backToLobby;
 }
 
-async function backToLobby(){
-  const ref = db.collection('rooms').doc(S.roomCode);
-  try{
-    await db.runTransaction(async (t)=>{
-      const snap = await t.get(ref);
-      const data = snap.data();
-      const update = {
-        status: 'lobby',
-        currentBid: null,
-        turnIndex: 0,
-        round: 0,
-        winner: null,
-        log: firebase.firestore.FieldValue.arrayUnion('--- ロビーに戻りました ---')
-      };
-      Object.keys(data.players).forEach(id=>{
-        update[`players.${id}.lives`] = 3;
-        update[`players.${id}.eliminated`] = false;
-        update[`players.${id}.number`] = 0;
-      });
-      t.update(ref, update);
-    });
-  }catch(e){ console.error(e); }
+function renderEntry(){
+  app.innerHTML = `
+    ${header()}
+    <div class="panel">
+      <div class="tabs">
+        <div class="tab ${entryMode==='create'?'active':''}" onclick="__ns.setEntryMode('create')">部屋を作る</div>
+        <div class="tab ${entryMode==='join'?'active':''}" onclick="__ns.setEntryMode('join')">部屋に入る</div>
+      </div>
+      <div class="field">
+        <label>ニックネーム</label>
+        <input type="text" id="nameInput" placeholder="例: たろう" maxlength="12" value="${esc(savedName)}">
+      </div>
+      ${entryMode==='join' ? `
+      <div class="field">
+        <label>部屋コード</label>
+        <input type="text" id="codeInput" placeholder="例: 8QXM" maxlength="4" style="text-transform:uppercase;letter-spacing:0.1em;">
+      </div>` : ''}
+      ${entryError ? `<div class="error-msg">${esc(entryError)}</div>` : ''}
+      <button class="btn-primary" onclick="${entryMode==='create' ? '__ns.doCreate()' : '__ns.doJoin()'}">
+        ${entryMode==='create' ? '部屋を作成する' : '参加する'}
+      </button>
+    </div>
+    <div class="footer-note">相手の数字だけが見える、駆け引きのゲーム</div>
+  `;
+  if(savedRoom){
+    // try silent rejoin
+  }
 }
 
-render();
+function playerCount(){ return Object.keys(state.players).length; }
+
+function renderLobby(){
+  const isHost = state.hostId === playerId;
+  const players = Object.entries(state.players).sort((a,b)=>a[1].order-b[1].order);
+  app.innerHTML = `
+    ${header()}
+    <div class="panel">
+      <div class="room-code">${esc(roomId)}</div>
+      <div class="room-code-label">このコードを仲間に伝えて参加してもらおう</div>
+      <div class="section-title">プレイヤー (${players.length})</div>
+      <ul class="player-list">
+        ${players.map(([id,p])=>`
+          <li class="player-row">
+            <span class="player-name">
+              ${esc(p.name)}
+              ${id===playerId ? '<span class="you-tag">あなた</span>' : ''}
+              ${id===state.hostId ? '<span class="host-tag">ホスト</span>' : ''}
+            </span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+    ${isHost ? `
+    <div class="panel">
+      <div class="field">
+        <label>開始ライフ</label>
+        <select onchange="__ns.setLife(this.value)">
+          ${[1,2,3,4,5].map(n=>`<option value="${n}" ${state.startingLife===n?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn-primary" ${players.length<2?'disabled':''} onclick="__ns.startGame()">
+        ${players.length<2 ? 'あと1人待っています…' : 'ゲームをはじめる'}
+      </button>
+    </div>
+    ` : `
+    <div class="panel">
+      <div class="spectator-note">ホストがゲームを開始するのを待っています…</div>
+    </div>
+    `}
+    <button class="link-btn" onclick="__ns.leaveRoom()">部屋を出る</button>
+    <div class="footer-note">2〜9人でバトル。人数が奇数のときは1人ずつ交代で見守ります</div>
+  `;
+}
+
+function findMyPair(){
+  if(!state.pairs) return null;
+  for(const key of Object.keys(state.pairs)){
+    const pair = state.pairs[key];
+    if(pair.p1 === playerId) return {key, pair, slot:'p1', oppSlot:'p2', oppId:pair.p2};
+    if(pair.p2 === playerId) return {key, pair, slot:'p2', oppSlot:'p1', oppId:pair.p1};
+  }
+  return null;
+}
+
+function matchStatusList(){
+  const keys = Object.keys(state.pairs);
+  return keys.map(key=>{
+    const pair = state.pairs[key];
+    const n1 = state.players[pair.p1].name;
+    const n2 = state.players[pair.p2].name;
+    const c1 = pair.p1Choice ? (pair.p1Choice==='bet'?'強気':'降り') : '思案中';
+    const c2 = pair.p2Choice ? (pair.p2Choice==='bet'?'強気':'降り') : '思案中';
+    let resultHtml = '';
+    if(pair.result){
+      if(pair.result.draw){
+        resultHtml = `<div class="result-line">両者降りて引き分け</div>`;
+      } else {
+        const winnerName = state.players[pair.result.winner].name;
+        const loserName = state.players[pair.result.loser].name;
+        resultHtml = `<div class="result-line"><span class="tag-win">${esc(winnerName)}の勝ち</span>　<span class="tag-lose">${esc(loserName)} ライフ-1</span></div>`;
+      }
+    }
+    return `
+      <div class="match-card">
+        <div class="match-top"><span>${esc(n1)}</span><span class="num">${pair.p1Number}</span></div>
+        <div class="match-mid">${c1} ー vs ー ${c2}</div>
+        <div class="match-top"><span>${esc(n2)}</span><span class="num">${pair.p2Number}</span></div>
+        ${resultHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderChoosing(){
+  const mine = findMyPair();
+  const isSpectatorNow = state.spectatorId === playerId;
+  const isEliminated = state.players[playerId] && !state.players[playerId].alive;
+
+  let stageHtml = '';
+  if(mine){
+    const oppName = state.players[mine.oppId].name;
+    const oppNumber = mine.pair[mine.oppSlot + 'Number'];
+    const myChoice = mine.pair[mine.slot + 'Choice'] || localChoice[mine.key];
+    stageHtml = `
+      <div class="panel">
+        <div class="stage">
+          <div class="vs-label">相手の数字</div>
+          <div class="opponent-name">${esc(oppName)}</div>
+          <div class="big-number">${oppNumber}</div>
+          <div class="big-number-hint">自分の数字は見えません</div>
+          <div class="choice-row">
+            <button class="choice-btn choice-fold ${myChoice==='fold'?'selected':''}" ${myChoice?'disabled':''}
+              onclick="__ns.submitChoice('${mine.key}','${mine.slot}','fold')">降りる</button>
+            <button class="choice-btn choice-bet ${myChoice==='bet'?'selected':''}" ${myChoice?'disabled':''}
+              onclick="__ns.submitChoice('${mine.key}','${mine.slot}','bet')">強気</button>
+          </div>
+          ${myChoice ? `<div class="waiting-note">選択しました。相手の決断を待っています…</div>` : ''}
+        </div>
+      </div>
+    `;
+  } else {
+    stageHtml = `
+      <div class="panel">
+        <div class="spectator-note">
+          ${isEliminated ? '脱落しました。このラウンドは観戦です' : isSpectatorNow ? '今ラウンドはお休みです。見守りましょう' : '待機中です'}
+        </div>
+      </div>
+    `;
+  }
+
+  app.innerHTML = `
+    ${header()}
+    <div class="badge" style="align-self:flex-start;margin-bottom:10px;">ラウンド ${state.roundNumber}</div>
+    ${stageHtml}
+    <div class="panel">
+      <div class="section-title">全体の状況</div>
+      ${matchStatusList()}
+    </div>
+    ${lifeSummary()}
+  `;
+}
+
+function renderResolved(){
+  const isHost = state.hostId === playerId;
+  app.innerHTML = `
+    ${header()}
+    <div class="badge" style="align-self:flex-start;margin-bottom:10px;">ラウンド ${state.roundNumber} 結果</div>
+    <div class="panel">
+      <div class="section-title">結果発表</div>
+      ${matchStatusList()}
+    </div>
+    ${lifeSummary()}
+    ${isHost ? `
+      <button class="btn-primary" onclick="__ns.nextRound()">
+        ${state.winnerId ? '優勝者を見る' : '次のラウンドへ'}
+      </button>
+    ` : `
+      <div class="panel"><div class="spectator-note">ホストが次のラウンドを開始するのを待っています…</div></div>
+    `}
+  `;
+}
+
+function lifeSummary(){
+  const maxLife = state.startingLife;
+  const players = Object.entries(state.players).sort((a,b)=>a[1].order-b[1].order);
+  return `
+    <div class="panel">
+      <div class="section-title">ライフ</div>
+      <ul class="player-list">
+        ${players.map(([id,p])=>`
+          <li class="player-row">
+            <span class="player-name">
+              ${esc(p.name)}
+              ${id===playerId?'<span class="you-tag">あなた</span>':''}
+              ${!p.alive?'<span class="dead-tag">脱落</span>':''}
+            </span>
+            ${hearts(p.life, maxLife)}
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function renderGameOver(){
+  const isHost = state.hostId === playerId;
+  const winner = state.winnerId ? state.players[state.winnerId] : null;
+  app.innerHTML = `
+    ${header()}
+    <div class="panel winner-box">
+      <div class="crown">♛</div>
+      <div class="name">${winner ? esc(winner.name) : '???'}</div>
+      <div class="sub">${winner ? '優勝おめでとう！' : '勝者を決定できませんでした'}</div>
+      ${isHost ? `<button class="btn-primary" onclick="__ns.playAgain()">もう一度あそぶ</button>` : `<div class="spectator-note">ホストが次のゲームを準備するのを待っています…</div>`}
+    </div>
+    ${lifeSummary()}
+    <button class="link-btn" onclick="__ns.leaveRoom()">部屋を出る</button>
+  `;
+}
+
+/* ------------------------------------------------------------------ */
+/* Boot                                                                 */
+/* ------------------------------------------------------------------ */
+if(savedRoom){
+  attachRoom(savedRoom);
+} else {
+  render();
+}
 </script>
 </body>
 </html>
