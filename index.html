@@ -3,207 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>インクバトル・アリーナ</title>
+<title>INK FIELD BATTLE</title>
 <style>
-  :root{
-    --orange:#ff6a1a;
-    --orange-dark:#c94e0f;
-    --blue:#1ac0ff;
-    --blue-dark:#0e86b8;
-    --bg:#12141a;
-    --panel:#1c2028;
-    --ink:#f2f3f5;
-  }
-  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-  html,body{
-    margin:0; padding:0; width:100%; height:100%;
-    background:var(--bg); color:var(--ink);
-    font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif;
-    overflow:hidden; overscroll-behavior:none; touch-action:none;
-  }
-  #app{ position:fixed; inset:0; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; -webkit-user-select:none; touch-action:none; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#0b0d13; font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif; }
+  #gameCanvas { display:block; position:absolute; top:0; left:0; }
 
-  /* ---------- 共通画面パネル ---------- */
-  .screen{
-    position:absolute; inset:0; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:16px; padding:24px;
-    text-align:center;
+  /* --- Overlay: Lobby --- */
+  #lobby {
+    position:absolute; inset:0; z-index:50;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background: radial-gradient(circle at 50% 20%, #1a1f2e 0%, #0b0d13 70%);
+    color:#fff; gap:18px; padding:24px;
   }
-  .hidden{ display:none !important; }
-  .logo{
-    font-size:34px; font-weight:900; letter-spacing:1px;
-    background:linear-gradient(90deg,var(--orange),var(--blue));
+  #lobby h1 {
+    font-size:28px; letter-spacing:2px; font-weight:900;
+    background: linear-gradient(90deg,#F2622E,#1FB6A6);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    margin-bottom:4px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.4));
   }
-  .sub{ color:#9aa1ad; font-size:13px; margin-top:-10px; }
-  input, .btn, select{
-    font-size:17px; padding:14px 18px; border-radius:14px; border:none;
-    width:min(320px,80vw);
+  #lobby input {
+    width:220px; padding:12px 14px; border-radius:10px; border:2px solid #333c50;
+    background:#161b26; color:#fff; font-size:16px; text-align:center;
   }
-  input{ background:#252a34; color:var(--ink); border:2px solid #333a46; text-align:center; letter-spacing:4px; }
-  input:focus{ outline:none; border-color:var(--blue); }
-  .btn{
-    background:linear-gradient(135deg,var(--orange),#ff9248);
-    color:#1a1005; font-weight:800; cursor:pointer; box-shadow:0 6px 0 var(--orange-dark);
-    transition:transform .05s;
+  .teamRow { display:flex; gap:12px; }
+  .teamBtn {
+    width:100px; padding:14px 0; border-radius:12px; border:3px solid transparent;
+    font-weight:800; font-size:15px; color:#fff; cursor:pointer;
   }
-  .btn:active{ transform:translateY(4px); box-shadow:0 2px 0 var(--orange-dark); }
-  .btn.blue{ background:linear-gradient(135deg,var(--blue),#6fe0ff); box-shadow:0 6px 0 var(--blue-dark); color:#012230;}
-  .btn.blue:active{ box-shadow:0 2px 0 var(--blue-dark); }
-  .btn.ghost{ background:#252a34; color:var(--ink); box-shadow:0 6px 0 #10131a; }
-  .btn.ghost:active{ box-shadow:0 2px 0 #10131a; }
-  .name-tag{ color:#9aa1ad; font-size:13px; }
+  .teamBtn.a { background:#F2622E; }
+  .teamBtn.b { background:#1FB6A6; }
+  .teamBtn.selected { border-color:#fff; transform:scale(1.06); }
+  #joinBtn {
+    padding:14px 40px; border-radius:30px; border:none; font-size:17px; font-weight:900;
+    background:#fff; color:#111; letter-spacing:1px; box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  #joinBtn:active { transform:scale(0.96); }
+  #lobbyStatus { font-size:12px; color:#8a93a8; min-height:16px; }
 
-  .roomcode-box{
-    font-size:30px; font-weight:900; letter-spacing:8px; padding:14px 26px;
-    background:#252a34; border-radius:14px; border:2px dashed #444c5a;
+  /* --- HUD --- */
+  #hud {
+    position:absolute; top:0; left:0; right:0; z-index:20;
+    display:flex; align-items:center; padding:10px 12px; gap:10px;
+    pointer-events:none;
   }
-  .team-pick{ display:flex; gap:12px; }
-  .team-card{
-    width:120px; padding:16px 10px; border-radius:16px; font-weight:800;
-    border:3px solid transparent; cursor:pointer; background:#252a34;
+  #timer {
+    background:rgba(10,12,18,.75); color:#fff; font-weight:900; font-size:16px;
+    padding:6px 14px; border-radius:20px; min-width:56px; text-align:center;
+    border:1px solid rgba(255,255,255,.15);
   }
-  .team-card.orange{ color:var(--orange); }
-  .team-card.blue{ color:var(--blue); }
-  .team-card.selected.orange{ border-color:var(--orange); background:#3a2214; }
-  .team-card.selected.blue{ border-color:var(--blue); background:#123544; }
-  .team-count{ font-size:12px; color:#9aa1ad; margin-top:4px; }
+  #scoreBar {
+    flex:1; height:16px; border-radius:8px; overflow:hidden; display:flex;
+    background:#20242f; border:1px solid rgba(255,255,255,.15);
+  }
+  #scoreA { background:#F2622E; height:100%; width:50%; transition: width .25s; }
+  #scoreB { background:#1FB6A6; height:100%; width:50%; transition: width .25s; }
+  #pct { display:flex; justify-content:space-between; font-size:11px; color:#cfd4e0; padding:0 4px; }
 
-  .player-list{ font-size:13px; color:#c6cbd4; max-height:120px; overflow:auto; }
-
-  /* ---------- ゲーム画面 ---------- */
-  #gameScreen{ padding:0; justify-content:flex-start; }
-  #hud{
-    position:absolute; top:0; left:0; right:0; z-index:5;
-    display:flex; flex-direction:column; align-items:center;
-    padding:8px 10px calc(6px + env(safe-area-inset-top)) 10px; gap:6px;
-    background:linear-gradient(180deg,rgba(0,0,0,.55),transparent);
+  /* --- Result --- */
+  #result {
+    position:absolute; inset:0; z-index:60; display:none;
+    align-items:center; justify-content:center; flex-direction:column; gap:10px;
+    background:rgba(5,6,10,.9); color:#fff; text-align:center;
   }
-  #timer{ font-size:22px; font-weight:900; text-shadow:0 2px 4px #000; }
-  #coverBar{
-    width:min(92vw,520px); height:20px; border-radius:10px; overflow:hidden;
-    display:flex; border:2px solid #000; background:#222;
-  }
-  #coverOrange{ background:var(--orange); height:100%; }
-  #coverBlue{ background:var(--blue); height:100%; }
-  #coverLabels{ display:flex; justify-content:space-between; width:min(92vw,520px); font-size:12px; font-weight:700; }
-  #coverLabels .o{ color:var(--orange); } #coverLabels .b{ color:var(--blue); }
-
-  #canvasWrap{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-  canvas{ background:#0b0c10; touch-action:none; }
-
-  /* ---------- 操作パネル ---------- */
-  #controls{ position:absolute; inset:0; z-index:6; pointer-events:none; }
-  .joyBase{
-    position:absolute; left:24px; bottom:calc(28px + env(safe-area-inset-bottom));
-    width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,.08);
-    border:2px solid rgba(255,255,255,.25); pointer-events:auto;
-  }
-  .joyStick{
-    position:absolute; left:35px; top:35px; width:50px; height:50px; border-radius:50%;
-    background:rgba(255,255,255,.45);
-  }
-  .actionBtns{
-    position:absolute; right:20px; bottom:calc(24px + env(safe-area-inset-bottom));
-    display:flex; flex-direction:column; align-items:center; gap:14px; pointer-events:auto;
-  }
-  .fireBtn{
-    width:92px; height:92px; border-radius:50%; border:3px solid #fff3;
-    background:radial-gradient(circle at 35% 30%, #ffb37a, var(--orange) 70%);
-    color:#2a1200; font-weight:900; font-size:15px; display:flex; align-items:center; justify-content:center;
-    box-shadow:0 6px 0 var(--orange-dark);
-  }
-  .fireBtn.blueTeam{ background:radial-gradient(circle at 35% 30%, #a6ecff, var(--blue) 70%); box-shadow:0 6px 0 var(--blue-dark); color:#03222c;}
-  .fireBtn:active{ transform:translateY(4px); box-shadow:none; }
-  .specialBtn{
-    width:64px; height:64px; border-radius:16px; border:3px solid #fff3; background:#3a3f4a;
-    color:#7a808c; font-weight:900; font-size:11px; display:flex; align-items:center; justify-content:center;
-  }
-  .specialBtn.ready{ background:linear-gradient(135deg,#ffe066,#ffb703); color:#2a1a00; border-color:#fff; animation:pulse 1s infinite; }
-  @keyframes pulse{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.08);} }
-
-  #killFeed{
-    position:absolute; top:78px; left:50%; transform:translateX(-50%); z-index:5;
-    display:flex; flex-direction:column; gap:4px; align-items:center; pointer-events:none;
-  }
-  #killFeed div{ background:rgba(0,0,0,.55); padding:4px 10px; border-radius:8px; font-size:12px; }
-
-  #splatFlash{
-    position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:7;
+  #result h2 { font-size:30px; font-weight:900; }
+  #result p { font-size:15px; color:#b9c0d1; }
+  #result button {
+    margin-top:14px; padding:12px 30px; border-radius:24px; border:none;
+    background:#fff; color:#111; font-weight:900; font-size:15px;
   }
 
-  #resultScreen h2{ font-size:28px; margin:0; }
-  .resultBar{ display:flex; width:min(90vw,420px); height:34px; border-radius:10px; overflow:hidden; border:2px solid #000; }
-  .kdRow{ display:flex; gap:24px; font-size:13px; color:#c6cbd4; }
-  .footer-note{ position:fixed; bottom:6px; left:0; right:0; text-align:center; font-size:10px; color:#4a505c; z-index:1; }
+  /* --- Controls --- */
+  #controls {
+    position:absolute; inset:0; z-index:15; pointer-events:none;
+  }
+  #joystickZone {
+    position:absolute; left:0; bottom:0; width:45%; height:45%;
+    pointer-events:auto;
+  }
+  #joystickBase {
+    position:absolute; width:110px; height:110px; border-radius:50%;
+    background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.25);
+    display:none;
+  }
+  #joystickStick {
+    position:absolute; width:50px; height:50px; border-radius:50%;
+    background:rgba(255,255,255,.5); border:2px solid rgba(255,255,255,.7);
+    display:none;
+  }
+  #shootBtn {
+    position:absolute; right:26px; bottom:36px; width:92px; height:92px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffdcae, #F2622E 70%);
+    border:3px solid rgba(255,255,255,.6); pointer-events:auto;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; color:#4a1c00; font-size:13px; letter-spacing:1px;
+    box-shadow:0 6px 16px rgba(0,0,0,.4);
+  }
+  #shootBtn.active { transform:scale(0.92); filter:brightness(1.15); }
 </style>
 </head>
 <body>
-<div id="app">
 
-  <!-- タイトル画面 -->
-  <div id="titleScreen" class="screen">
-    <div class="logo">INK BATTLE ARENA</div>
-    <div class="sub">陣地をぬって、ぶつけあえ。オリジナル・インク対戦ゲーム</div>
-    <input id="nickInput" maxlength="8" placeholder="ニックネーム(8文字まで)">
-    <button class="btn" id="btnCreate">ルームを作成する</button>
-    <button class="btn ghost" id="btnShowJoin">コードで参加する</button>
-    <div id="joinBox" class="hidden" style="display:flex;flex-direction:column;gap:12px;align-items:center;">
-      <input id="codeInput" maxlength="5" placeholder="ルームコード">
-      <button class="btn blue" id="btnJoin">参加する</button>
-    </div>
-    <div id="titleError" class="sub" style="color:#ff6a6a;"></div>
+<canvas id="gameCanvas"></canvas>
+
+<div id="hud" style="display:none;">
+  <div id="timer">90</div>
+  <div>
+    <div id="scoreBar"><div id="scoreA"></div><div id="scoreB"></div></div>
+    <div id="pct"><span id="pctA">50%</span><span id="pctB">50%</span></div>
   </div>
-
-  <!-- ロビー画面 -->
-  <div id="lobbyScreen" class="screen hidden">
-    <div class="sub">このコードを対戦相手に伝えよう</div>
-    <div class="roomcode-box" id="roomCodeShow">-----</div>
-    <div class="team-pick">
-      <div class="team-card orange" id="pickOrange">🟠 オレンジ<div class="team-count" id="cntOrange">0人</div></div>
-      <div class="team-card blue" id="pickBlue">🔵 ブルー<div class="team-count" id="cntBlue">0人</div></div>
-    </div>
-    <div class="player-list" id="playerList"></div>
-    <button class="btn" id="btnStart">対戦開始!</button>
-    <div class="sub" id="lobbyHint">誰か1人がスタートすれば全員の試合が始まります</div>
-  </div>
-
-  <!-- ゲーム画面 -->
-  <div id="gameScreen" class="screen hidden">
-    <div id="hud">
-      <div id="timer">90</div>
-      <div id="coverBar"><div id="coverOrange" style="width:50%"></div><div id="coverBlue" style="width:50%"></div></div>
-      <div id="coverLabels"><span class="o" id="pctOrange">オレンジ 50%</span><span class="b" id="pctBlue">ブルー 50%</span></div>
-    </div>
-    <div id="killFeed"></div>
-    <div id="canvasWrap"><canvas id="canvas"></canvas></div>
-    <div id="controls">
-      <div class="joyBase" id="joyBase"><div class="joyStick" id="joyStick"></div></div>
-      <div class="actionBtns">
-        <div class="specialBtn" id="specialBtn">SP</div>
-        <div class="fireBtn" id="fireBtn">ぬる</div>
-      </div>
-    </div>
-    <div id="splatFlash"></div>
-  </div>
-
-  <!-- 結果画面 -->
-  <div id="resultScreen" class="screen hidden">
-    <div class="logo" id="resultTitle">試合終了</div>
-    <h2 id="winnerText">-</h2>
-    <div class="resultBar"><div id="resOrange" style="background:var(--orange);"></div><div id="resBlue" style="background:var(--blue);"></div></div>
-    <div class="kdRow"><span id="myKills">たおした: 0</span><span id="myDeaths">たおされた: 0</span></div>
-    <button class="btn" id="btnReplay">タイトルへ戻る</button>
-  </div>
-
-  <div class="footer-note">Original fan-made game / not affiliated with Nintendo</div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-<script>
-/* ===================== Firebase 初期化 ===================== */
+<div id="controls" style="display:none;">
+  <div id="joystickZone">
+    <div id="joystickBase"></div>
+    <div id="joystickStick"></div>
+  </div>
+  <div id="shootBtn">INK</div>
+</div>
+
+<div id="lobby">
+  <h1>INK FIELD BATTLE</h1>
+  <input id="roomInput" placeholder="ルームID (例: room1)" value="room1">
+  <div class="teamRow">
+    <div class="teamBtn a" id="teamA">オレンジ</div>
+    <div class="teamBtn b" id="teamB">ティール</div>
+  </div>
+  <button id="joinBtn">バトル開始</button>
+  <div id="lobbyStatus"></div>
+</div>
+
+<div id="result">
+  <h2 id="resultTitle">RESULT</h2>
+  <p id="resultDetail"></p>
+  <button id="againBtn">もう一度</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase, ref, set, update, onValue, onDisconnect, remove, get, runTransaction
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDWxhILNkj0RrOV248Bh2zoFZfNq2G-3N0",
   authDomain: "zoukin-kart.firebaseapp.com",
@@ -214,500 +155,348 @@ const firebaseConfig = {
   appId: "1:627298939041:web:3dafaed8c6d267f1d780e0",
   measurementId: "G-DDW4R9EXW5"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-/* ===================== 定数 ===================== */
-const GRID = 16;                 // 16x16マス
-const CELL = 40;                 // 論理ピクセル
-const ARENA = GRID * CELL;       // 640
-const MATCH_MS = 90 * 1000;      // 90秒
-const PLAYER_R = 14;
-const SHOT_R = 8;
-const MOVE_SPEED = 210;          // px/s
-const SWIM_SPEED = 340;
-const SHOT_SPEED = 620;
-const SHOT_LIFE = 0.34;          // 秒
-const FIRE_RATE = 1000/7;        // ms
-const RESPAWN_INVULN = 1200;     // ms
-const SPECIAL_MAX = 100;
-const SPECIAL_RADIUS = 90;
+/* ============ CONFIG ============ */
+const COLS = 14, ROWS = 20;              // フィールドの格子サイズ(軽量に保つ)
+const BATTLE_MS = 90000;                 // 90秒バトル
+const TEAM_COLOR = { a:'#F2622E', b:'#1FB6A6', n:'#3a4055' };
+const TEAM_COLOR_DARK = { a:'#c94d1f', b:'#159d90', n:'#2c3040' };
+const uid = 'p' + Math.random().toString(36).slice(2,9);
 
-const TEAM_COLOR = { orange:'#ff6a1a', blue:'#1ac0ff' };
-const TEAM_SPAWN = {
-  orange: {x: CELL*1.5, y: CELL*1.5},
-  blue:   {x: ARENA-CELL*1.5, y: ARENA-CELL*1.5}
-};
+let myTeam = null, roomId = null;
+let cellW=0, cellH=0, originX=0, originY=0;
 
-/* ===================== 状態 ===================== */
-const myId = 'p' + Math.random().toString(36).slice(2,10);
-let nickname = 'プレイヤー';
-let roomCode = null;
-let myTeam = null;
-let isHost = false;
-let serverOffset = 0;
+/* grid: 0=neutral,1=team a,2=team b */
+let grid = new Array(COLS*ROWS).fill(0);
+let pendingTileUpdates = {};
 
-let grid = {};          // {cellIndex: 'orange'|'blue'}
-let players = {};        // {id: {x,y,team,name,alive,stunUntil}}
-let localShots = [];     // 自分が撃った弾(見た目のみローカル)
-let me = { x:0, y:0, facing:{x:1,y:0}, special:0, kills:0, deaths:0 };
-let matchStartAt = null;
-let matchEnded = false;
-let lastFireAt = 0;
-let firing = false;
+let players = {}; // uid -> {x,y,angle,team,name}
+let me = { x: COLS/2, y: ROWS/2, angle:0, team:null };
 
-let joyVec = {x:0, y:0};
-let joyActive = false;
+let battleEnd = 0;
+let running = false;
 
-let roomRef=null, gridRef=null, playersRef=null, statusRef=null;
+/* ============ CANVAS SETUP ============ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+function resize(){
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  canvas.style.width = window.innerWidth+'px';
+  canvas.style.height = window.innerHeight+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
 
-/* ===================== DOM ===================== */
-const $ = id => document.getElementById(id);
-const screens = { title:$('titleScreen'), lobby:$('lobbyScreen'), game:$('gameScreen'), result:$('resultScreen') };
-function showScreen(name){
-  Object.values(screens).forEach(s=>s.classList.add('hidden'));
-  screens[name].classList.remove('hidden');
+  const availW = window.innerWidth * 0.92;
+  const availH = window.innerHeight * 0.86;
+  cellW = Math.min(availW/COLS, availH/ROWS);
+  cellH = cellW;
+  originX = (window.innerWidth - cellW*COLS)/2;
+  originY = (window.innerHeight - cellH*ROWS)/2 + 14;
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* per-cell fixed "facet" shading so triangles look like low-poly terrain */
+const facetSeed = new Array(COLS*ROWS).fill(0).map(()=> (Math.random()*0.5)); // 0..0.5 darkness variance
+
+function idx(cx,cy){ return cy*COLS+cx; }
+
+/* ============ DRAW ============ */
+function shade(hex, amt){
+  // amt: -1..1 darken/lighten
+  const c = hex.replace('#','');
+  let r=parseInt(c.substr(0,2),16), g=parseInt(c.substr(2,2),16), b=parseInt(c.substr(4,2),16);
+  const f = amt<0 ? (v)=>v*(1+amt) : (v)=>v+(255-v)*amt;
+  r=Math.max(0,Math.min(255,f(r))); g=Math.max(0,Math.min(255,f(g))); b=Math.max(0,Math.min(255,f(b)));
+  return `rgb(${r|0},${g|0},${b|0})`;
 }
 
-/* ---- タイトル画面 ---- */
-$('btnShowJoin').onclick = ()=> $('joinBox').classList.remove('hidden');
-$('btnCreate').onclick = ()=> startFlow('create');
-$('btnJoin').onclick = ()=> startFlow('join');
+function drawField(){
+  ctx.fillStyle = '#0b0d13';
+  ctx.fillRect(0,0,window.innerWidth, window.innerHeight);
 
-function startFlow(mode){
-  nickname = ($('nickInput').value || 'プレイヤー').trim().slice(0,8) || 'プレイヤー';
-  $('titleError').textContent = '';
-  if(mode==='create'){
-    roomCode = genCode();
-    isHost = true;
-    initRoomRefs();
-    roomRef.set({
-      createdAt: firebase.database.ServerValue.TIMESTAMP,
-      status: 'lobby',
-      grid: {}
-    }).then(()=>{
-      joinAsPlayer();
-      enterLobby();
-    });
-  } else {
-    const code = ($('codeInput').value || '').trim().toUpperCase();
-    if(code.length < 3){ $('titleError').textContent = 'コードを入力してください'; return; }
-    roomCode = code;
-    roomRef = db.ref('rooms/'+roomCode);
-    roomRef.get().then(snap=>{
-      if(!snap.exists()){ $('titleError').textContent = 'そのルームは見つかりませんでした'; roomCode=null; return; }
-      isHost = false;
-      initRoomRefs();
-      joinAsPlayer();
-      enterLobby();
-    });
-  }
-}
+  for(let cy=0; cy<ROWS; cy++){
+    for(let cx=0; cx<COLS; cx++){
+      const i = idx(cx,cy);
+      const team = grid[i]===1?'a':grid[i]===2?'b':'n';
+      const baseColor = TEAM_COLOR[team];
+      const x0 = originX+cx*cellW, y0 = originY+cy*cellH;
+      const x1 = x0+cellW, y1 = y0+cellH;
+      const facet = facetSeed[i];
 
-function genCode(){
-  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let s=''; for(let i=0;i<5;i++) s+=c[Math.floor(Math.random()*c.length)];
-  return s;
-}
+      // triangle 1 (top-left) - lighter facet
+      ctx.beginPath();
+      ctx.moveTo(x0,y0); ctx.lineTo(x1,y0); ctx.lineTo(x0,y1); ctx.closePath();
+      ctx.fillStyle = shade(baseColor, 0.12 - facet*0.3);
+      ctx.fill();
 
-function initRoomRefs(){
-  roomRef = db.ref('rooms/'+roomCode);
-  gridRef = roomRef.child('grid');
-  playersRef = roomRef.child('players');
-  statusRef = roomRef.child('status');
-}
-
-function joinAsPlayer(){
-  playersRef.once('value').then(snap=>{
-    const list = snap.val() || {};
-    let oCount=0,bCount=0;
-    Object.values(list).forEach(p=>{ if(p.team==='orange') oCount++; else if(p.team==='blue') bCount++; });
-    myTeam = oCount<=bCount ? 'orange' : 'blue';
-    const spawn = TEAM_SPAWN[myTeam];
-    me.x = spawn.x; me.y = spawn.y;
-    playersRef.child(myId).set({
-      name: nickname, team: myTeam, x: me.x, y: me.y,
-      alive: true, stunUntil: 0, kills:0, deaths:0, joinedAt: firebase.database.ServerValue.TIMESTAMP
-    });
-    playersRef.child(myId).onDisconnect().remove();
-    highlightTeam();
-  });
-}
-
-/* ---- ロビー画面 ---- */
-function enterLobby(){
-  showScreen('lobby');
-  $('roomCodeShow').textContent = roomCode;
-  playersRef.on('value', snap=>{
-    players = snap.val() || {};
-    renderLobby();
-  });
-  statusRef.on('value', snap=>{
-    const st = snap.val();
-    if(st === 'playing' && !matchStartAt){
-      beginGameLocal();
-    }
-  });
-}
-
-function renderLobby(){
-  let oCount=0,bCount=0, html='';
-  Object.entries(players).forEach(([id,p])=>{
-    if(p.team==='orange') oCount++; else bCount++;
-    const mark = id===myId ? ' (自分)' : '';
-    const color = p.team==='orange' ? 'var(--orange)' : 'var(--blue)';
-    html += `<div style="color:${color}">● ${escapeHtml(p.name)}${mark}</div>`;
-  });
-  $('cntOrange').textContent = oCount+'人';
-  $('cntBlue').textContent = bCount+'人';
-  $('playerList').innerHTML = html;
-}
-function highlightTeam(){
-  $('pickOrange').classList.toggle('selected', myTeam==='orange');
-  $('pickBlue').classList.toggle('selected', myTeam==='blue');
-}
-$('pickOrange').onclick = ()=> switchTeam('orange');
-$('pickBlue').onclick = ()=> switchTeam('blue');
-function switchTeam(team){
-  myTeam = team;
-  const spawn = TEAM_SPAWN[team];
-  me.x = spawn.x; me.y = spawn.y;
-  playersRef.child(myId).update({ team, x: me.x, y: me.y });
-  highlightTeam();
-}
-$('btnStart').onclick = ()=>{
-  statusRef.set('playing');
-  roomRef.child('startAt').set(firebase.database.ServerValue.TIMESTAMP);
-};
-
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* ===================== ゲーム開始 ===================== */
-let canvas, ctx;
-function beginGameLocal(){
-  matchStartAt = null; matchEnded = false;
-  me.kills=0; me.deaths=0; me.special=0;
-  const spawn = TEAM_SPAWN[myTeam];
-  me.x = spawn.x; me.y = spawn.y;
-  showScreen('game');
-  setupCanvas();
-
-  db.ref('.info/serverTimeOffset').on('value', s=> serverOffset = s.val()||0);
-  roomRef.child('startAt').once('value').then(s=>{
-    matchStartAt = s.val() || Date.now();
-    startListeners();
-    requestAnimationFrame(loop);
-  });
-}
-
-function setupCanvas(){
-  canvas = $('canvas');
-  ctx = canvas.getContext('2d');
-  resizeCanvas();
-  window.onresize = resizeCanvas;
-}
-function resizeCanvas(){
-  const wrap = $('canvasWrap');
-  const size = Math.min(wrap.clientWidth, wrap.clientHeight) * 0.96;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.style.width = size+'px';
-  canvas.style.height = size+'px';
-  canvas.width = size*dpr;
-  canvas.height = size*dpr;
-  ctx.setTransform(dpr*(size/ARENA),0,0,dpr*(size/ARENA),0,0);
-}
-
-let gridListenerOn=false, playersListenerOn=false;
-function startListeners(){
-  if(!gridListenerOn){
-    gridRef.on('value', snap=>{ grid = snap.val() || {}; updateCoverageUI(); });
-    gridListenerOn = true;
-  }
-  if(!playersListenerOn){
-    playersRef.on('value', snap=>{
-      const newPlayers = snap.val() || {};
-      checkKillFeed(players, newPlayers);
-      players = newPlayers;
-    });
-    playersListenerOn = true;
-  }
-}
-
-/* ===================== 入力: ジョイスティック ===================== */
-const joyBase = $('joyBase'), joyStick = $('joyStick');
-let joyTouchId = null, joyCenter = {x:0,y:0};
-joyBase.addEventListener('touchstart', e=>{
-  e.preventDefault();
-  const t = e.changedTouches[0];
-  joyTouchId = t.identifier;
-  const r = joyBase.getBoundingClientRect();
-  joyCenter = { x:r.left+r.width/2, y:r.top+r.height/2 };
-  joyActive = true;
-  updateJoy(t.clientX, t.clientY);
-}, {passive:false});
-window.addEventListener('touchmove', e=>{
-  for(const t of e.changedTouches){
-    if(t.identifier===joyTouchId){ e.preventDefault(); updateJoy(t.clientX, t.clientY); }
-  }
-}, {passive:false});
-window.addEventListener('touchend', e=>{
-  for(const t of e.changedTouches){
-    if(t.identifier===joyTouchId){ joyTouchId=null; joyActive=false; joyVec={x:0,y:0}; joyStick.style.left='35px'; joyStick.style.top='35px'; }
-  }
-});
-function updateJoy(cx,cy){
-  let dx=cx-joyCenter.x, dy=cy-joyCenter.y;
-  const max=42; const dist=Math.hypot(dx,dy);
-  if(dist>max){ dx=dx/dist*max; dy=dy/dist*max; }
-  joyStick.style.left = (35+dx)+'px';
-  joyStick.style.top = (35+dy)+'px';
-  joyVec = { x:dx/max, y:dy/max };
-}
-
-/* ---- 発射ボタン ---- */
-const fireBtn = $('fireBtn');
-fireBtn.addEventListener('touchstart', e=>{ e.preventDefault(); firing = true; });
-fireBtn.addEventListener('touchend', e=>{ e.preventDefault(); firing = false; });
-const specialBtn = $('specialBtn');
-specialBtn.addEventListener('touchstart', e=>{
-  e.preventDefault();
-  if(me.special>=SPECIAL_MAX) useSpecial();
-});
-
-function useSpecial(){
-  me.special = 0;
-  // 自分中心の円形を塗る + 敵をスタン
-  const cx = Math.floor(me.x/CELL), cy = Math.floor(me.y/CELL);
-  const radiusCells = Math.ceil(SPECIAL_RADIUS/CELL);
-  const updates = {};
-  for(let gy=cy-radiusCells; gy<=cy+radiusCells; gy++){
-    for(let gx=cx-radiusCells; gx<=cx+radiusCells; gx++){
-      if(gx<0||gy<0||gx>=GRID||gy>=GRID) continue;
-      const dx=(gx+0.5)*CELL-me.x, dy=(gy+0.5)*CELL-me.y;
-      if(Math.hypot(dx,dy) <= SPECIAL_RADIUS){
-        const idx = gy*GRID+gx;
-        if(grid[idx] !== myTeam) updates['grid/'+idx] = myTeam;
-      }
+      // triangle 2 (bottom-right) - darker facet
+      ctx.beginPath();
+      ctx.moveTo(x1,y0); ctx.lineTo(x1,y1); ctx.lineTo(x0,y1); ctx.closePath();
+      ctx.fillStyle = shade(baseColor, -0.08 - facet*0.3);
+      ctx.fill();
     }
   }
-  if(Object.keys(updates).length) roomRef.update(updates);
-  // 敵スタン
-  Object.entries(players).forEach(([id,p])=>{
-    if(id===myId || p.team===myTeam || p.alive===false) return;
-    if(Math.hypot(p.x-me.x, p.y-me.y) <= SPECIAL_RADIUS){
-      splatPlayer(id);
-    }
-  });
-  flash();
-}
-function flash(){
-  const f = $('splatFlash');
-  f.style.transition='none'; f.style.opacity='0.5';
-  requestAnimationFrame(()=>{ f.style.transition='opacity .3s'; f.style.opacity='0'; });
-}
 
-/* ===================== メインループ ===================== */
-let lastTs = 0;
-function loop(ts){
-  if(matchEnded) return;
-  if(!lastTs) lastTs = ts;
-  const dt = Math.min((ts-lastTs)/1000, 0.05);
-  lastTs = ts;
-
-  const now = Date.now() + serverOffset;
-  const elapsed = now - matchStartAt;
-  const remain = Math.max(0, MATCH_MS - elapsed);
-  $('timer').textContent = Math.ceil(remain/1000);
-  if(remain<=0){ endMatch(); return; }
-
-  updateMe(dt, now);
-  updateShots(dt);
-  render();
-
-  requestAnimationFrame(loop);
-}
-
-function updateMe(dt, now){
-  const stunned = me.stunUntil && now < me.stunUntil;
-  if(!stunned){
-    const mag = Math.hypot(joyVec.x, joyVec.y);
-    const myCell = grid[cellIndex(me.x, me.y)];
-    const speed = (myCell===myTeam) ? SWIM_SPEED : MOVE_SPEED;
-    if(mag>0.12){
-      const nx = joyVec.x/Math.max(mag,1);
-      const ny = joyVec.y/Math.max(mag,1);
-      me.x += nx*speed*dt;
-      me.y += ny*speed*dt;
-      me.facing = {x:nx, y:ny};
-    }
-    me.x = Math.max(PLAYER_R, Math.min(ARENA-PLAYER_R, me.x));
-    me.y = Math.max(PLAYER_R, Math.min(ARENA-PLAYER_R, me.y));
-
-    if(firing && now-lastFireAt > FIRE_RATE){
-      lastFireAt = now;
-      spawnShot();
-    }
-    // 自陣を塗ると自分のマスに常時ペイント(踏んだだけでは塗らない。撃った時のみ)
-  } else {
-    // スタン中は動けない
+  // grid lines (subtle)
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  ctx.lineWidth = 1;
+  for(let cx=0; cx<=COLS; cx++){
+    ctx.beginPath(); ctx.moveTo(originX+cx*cellW, originY); ctx.lineTo(originX+cx*cellW, originY+ROWS*cellH); ctx.stroke();
+  }
+  for(let cy=0; cy<=ROWS; cy++){
+    ctx.beginPath(); ctx.moveTo(originX, originY+cy*cellH); ctx.lineTo(originX+COLS*cellW, originY+cy*cellH); ctx.stroke();
   }
 
-  playersRef.child(myId).update({ x:me.x, y:me.y, alive:!stunned, stunUntil: me.stunUntil||0 });
-
-  specialBtn.classList.toggle('ready', me.special>=SPECIAL_MAX);
-  fireBtn.classList.toggle('blueTeam', myTeam==='blue');
+  // outer border (low-poly bevel look)
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(originX, originY, COLS*cellW, ROWS*cellH);
 }
 
-function cellIndex(x,y){
-  const gx = Math.floor(x/CELL), gy=Math.floor(y/CELL);
-  return gy*GRID+gx;
-}
+function drawPlayer(p, isMe){
+  const px = originX + p.x*cellW;
+  const py = originY + p.y*cellH;
+  const r = cellW*0.62;
+  const col = TEAM_COLOR[p.team] || '#fff';
+  const dark = TEAM_COLOR_DARK[p.team] || '#888';
 
-function spawnShot(){
-  localShots.push({ x:me.x+me.facing.x*PLAYER_R, y:me.y+me.facing.y*PLAYER_R, vx:me.facing.x*SHOT_SPEED, vy:me.facing.y*SHOT_SPEED, life:SHOT_LIFE });
-}
-
-function updateShots(dt){
-  const updates = {};
-  localShots = localShots.filter(s=>{
-    s.x += s.vx*dt; s.y += s.vy*dt; s.life -= dt;
-    if(s.x<0||s.y<0||s.x>ARENA||s.y>ARENA) return false;
-    if(s.life<=0) return false;
-
-    const idx = cellIndex(s.x,s.y);
-    if(grid[idx] !== myTeam && updates['grid/'+idx]===undefined){
-      updates['grid/'+idx] = myTeam;
-      me.special = Math.min(SPECIAL_MAX, me.special + 2.2);
-    }
-    // 敵ヒット判定
-    for(const [id,p] of Object.entries(players)){
-      if(id===myId || p.team===myTeam || p.alive===false) continue;
-      if(Math.hypot(p.x-s.x, p.y-s.y) < PLAYER_R+SHOT_R){
-        splatPlayer(id);
-        me.special = Math.min(SPECIAL_MAX, me.special + 15);
-        return false;
-      }
-    }
-    return true;
-  });
-  if(Object.keys(updates).length) roomRef.update(updates);
-}
-
-function splatPlayer(id){
-  const p = players[id];
-  if(!p || p.alive===false) return;
-  const spawn = TEAM_SPAWN[p.team];
-  const now = Date.now()+serverOffset;
-  playersRef.child(id).update({ x:spawn.x, y:spawn.y, alive:false, stunUntil: now+RESPAWN_INVULN, deaths:(p.deaths||0)+1 });
-  if(id!==myId){
-    me.kills += 1;
-    playersRef.child(myId).child('kills').set(me.kills);
-    pushKillFeed(`${nickname} が ${p.name} をスプラッシュ!`);
-  } else {
-    pushKillFeed(`${p.name} がやられた!`);
-  }
-}
-
-let lastFeedCheck = {};
-function checkKillFeed(oldP, newP){
-  Object.entries(newP).forEach(([id,p])=>{
-    const old = oldP[id];
-    if(old && old.alive!==false && p.alive===false && id!==myId){
-      // 誰か別プレイヤーが倒された(見た目演出のみ)
-    }
-  });
-}
-function pushKillFeed(text){
-  const el = document.createElement('div');
-  el.textContent = text;
-  $('killFeed').appendChild(el);
-  setTimeout(()=> el.remove(), 2200);
-}
-
-/* ===================== 描画 ===================== */
-function render(){
-  ctx.clearRect(0,0,ARENA,ARENA);
-  // グリッド
-  for(let gy=0; gy<GRID; gy++){
-    for(let gx=0; gx<GRID; gx++){
-      const idx = gy*GRID+gx;
-      const team = grid[idx];
-      ctx.fillStyle = team ? TEAM_COLOR[team] : '#1a1d24';
-      ctx.fillRect(gx*CELL, gy*CELL, CELL-1, CELL-1);
-    }
-  }
-  // 自分の弾
-  ctx.fillStyle = TEAM_COLOR[myTeam];
-  localShots.forEach(s=>{
-    ctx.beginPath(); ctx.arc(s.x, s.y, SHOT_R, 0, Math.PI*2); ctx.fill();
-  });
-  // 他プレイヤー
-  Object.entries(players).forEach(([id,p])=>{
-    if(id===myId) return;
-    drawPlayer(p.x, p.y, p.team, p.name, p.alive===false);
-  });
-  // 自分
-  drawPlayer(me.x, me.y, myTeam, nickname, me.stunUntil && Date.now()+serverOffset < me.stunUntil, true);
-}
-
-function drawPlayer(x,y,team,name,stunned,isMe){
   ctx.save();
-  ctx.globalAlpha = stunned ? 0.4 : 1;
-  ctx.fillStyle = TEAM_COLOR[team];
-  ctx.beginPath(); ctx.arc(x,y,PLAYER_R,0,Math.PI*2); ctx.fill();
-  ctx.lineWidth = isMe ? 3 : 2;
-  ctx.strokeStyle = '#fff';
+  ctx.translate(px,py);
+  ctx.rotate(p.angle);
+
+  // triangular "player" polygon (arrow / low-poly boat shape)
+  ctx.beginPath();
+  ctx.moveTo(r,0);
+  ctx.lineTo(-r*0.7, r*0.65);
+  ctx.lineTo(-r*0.35,0);
+  ctx.lineTo(-r*0.7,-r*0.65);
+  ctx.closePath();
+  ctx.fillStyle = col;
+  ctx.fill();
+  ctx.strokeStyle = isMe ? '#fff' : dark;
+  ctx.lineWidth = isMe ? 2.5 : 1.5;
   ctx.stroke();
-  // 目
-  ctx.fillStyle = '#08131a';
-  ctx.beginPath(); ctx.arc(x-4,y-2,2.2,0,Math.PI*2); ctx.arc(x+4,y-2,2.2,0,Math.PI*2); ctx.fill();
+
   ctx.restore();
-  ctx.fillStyle = '#fff'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-  ctx.fillText(name, x, y-PLAYER_R-6);
 }
 
-/* ===================== カバレッジUI ===================== */
-function updateCoverageUI(){
-  const total = GRID*GRID;
-  let o=0,b=0;
-  Object.values(grid).forEach(v=>{ if(v==='orange') o++; else if(v==='blue') b++; });
-  const op = total? Math.round(o/total*100):0;
-  const bp = total? Math.round(b/total*100):0;
-  $('coverOrange').style.width = op+'%';
-  $('coverBlue').style.width = bp+'%';
-  $('pctOrange').textContent = `オレンジ ${op}%`;
-  $('pctBlue').textContent = `ブルー ${bp}%`;
+function render(){
+  drawField();
+  for(const id in players){
+    if(id!==uid) drawPlayer(players[id], false);
+  }
+  drawPlayer(me, true);
+  requestAnimationFrame(render);
 }
 
-/* ===================== 試合終了 ===================== */
-function endMatch(){
-  if(matchEnded) return;
-  matchEnded = true;
-  const total = GRID*GRID;
-  let o=0,b=0;
-  Object.values(grid).forEach(v=>{ if(v==='orange') o++; else if(v==='blue') b++; });
-  const op = total? Math.round(o/total*100):0;
-  const bp = total? Math.round(b/total*100):0;
-  $('resOrange').style.width = op+'%';
-  $('resBlue').style.width = bp+'%';
-  let winner = op===bp ? '引き分け!' : (op>bp ? 'オレンジチームの勝利!' : 'ブルーチームの勝利!');
-  const myWin = (myTeam==='orange' && op>bp) || (myTeam==='blue' && bp>op);
-  $('resultTitle').textContent = op===bp ? '試合終了' : (myWin ? '勝利!' : '敗北...');
-  $('winnerText').textContent = winner + `  (オレンジ${op}% / ブルー${bp}%)`;
-  $('myKills').textContent = `たおした: ${me.kills}`;
-  $('myDeaths').textContent = `たおされた: ${me.deaths}`;
-  showScreen('result');
-  if(gridRef) gridRef.off();
-  if(playersRef) playersRef.off();
+/* ============ INK PAINTING ============ */
+function paintInk(){
+  if(!running) return;
+  const team = me.team===  'a' ? 1 : 2;
+  const range = 1.7; // マス単位の噴射範囲
+  const cx = Math.round(me.x + Math.cos(me.angle)*0.9);
+  const cy = Math.round(me.y + Math.sin(me.angle)*0.9);
+  for(let dy=-1; dy<=1; dy++){
+    for(let dx=-1; dx<=1; dx++){
+      const gx = cx+dx, gy = cy+dy;
+      if(gx<0||gy<0||gx>=COLS||gy>=ROWS) continue;
+      const dist = Math.hypot(gx-me.x, gy-me.y);
+      if(dist>range) continue;
+      const i = idx(gx,gy);
+      if(grid[i]!==team){
+        grid[i]=team;
+        pendingTileUpdates[i]=team;
+      }
+    }
+  }
+  updateScore();
 }
 
-$('btnReplay').onclick = ()=>{
-  if(playersRef) playersRef.child(myId).remove();
-  if(roomRef){ roomRef.off(); }
-  matchStartAt = null; roomCode=null; grid={}; players={}; localShots=[]; lastTs=0;
-  $('joinBox').classList.add('hidden');
-  $('codeInput').value=''; $('titleError').textContent='';
-  showScreen('title');
+function updateScore(){
+  let a=0,b=0,total=grid.length;
+  for(const v of grid){ if(v===1)a++; else if(v===2)b++; }
+  const pa = Math.round(a/total*100), pb = Math.round(b/total*100);
+  document.getElementById('scoreA').style.width = pa+'%';
+  document.getElementById('scoreB').style.width = pb+'%';
+  document.getElementById('pctA').textContent = 'A '+pa+'%';
+  document.getElementById('pctB').textContent = 'B '+pb+'%';
+  return {pa,pb};
+}
+
+/* flush tile updates to firebase periodically (throttled = 軽量) */
+setInterval(()=>{
+  if(!running) return;
+  const keys = Object.keys(pendingTileUpdates);
+  if(keys.length===0) return;
+  const payload = {};
+  for(const k of keys) payload[k]=pendingTileUpdates[k];
+  pendingTileUpdates = {};
+  update(ref(db, `rooms/${roomId}/tiles`), payload).catch(()=>{});
+}, 150);
+
+/* push my player state periodically */
+setInterval(()=>{
+  if(!running) return;
+  set(ref(db, `rooms/${roomId}/players/${uid}`), {
+    x: me.x, y: me.y, angle: me.angle, team: me.team, ts: Date.now()
+  }).catch(()=>{});
+}, 100);
+
+/* ============ INPUT: virtual joystick ============ */
+const joyZone = document.getElementById('joystickZone');
+const joyBase = document.getElementById('joystickBase');
+const joyStick = document.getElementById('joystickStick');
+let joyActive=false, joyCenter={x:0,y:0}, joyVec={x:0,y:0};
+
+function joyStart(x,y){
+  joyActive=true;
+  joyCenter={x,y};
+  joyBase.style.left=(x-55)+'px'; joyBase.style.top=(y-55)+'px'; joyBase.style.display='block';
+  joyStick.style.left=(x-25)+'px'; joyStick.style.top=(y-25)+'px'; joyStick.style.display='block';
+}
+function joyMove(x,y){
+  if(!joyActive) return;
+  let dx=x-joyCenter.x, dy=y-joyCenter.y;
+  const dist=Math.hypot(dx,dy), max=55;
+  if(dist>max){ dx=dx/dist*max; dy=dy/dist*max; }
+  joyStick.style.left=(joyCenter.x+dx-25)+'px'; joyStick.style.top=(joyCenter.y+dy-25)+'px';
+  joyVec = { x: dx/max, y: dy/max };
+}
+function joyEnd(){
+  joyActive=false; joyVec={x:0,y:0};
+  joyBase.style.display='none'; joyStick.style.display='none';
+}
+joyZone.addEventListener('touchstart', e=>{ const t=e.changedTouches[0]; joyStart(t.clientX,t.clientY); }, {passive:true});
+joyZone.addEventListener('touchmove', e=>{ const t=e.changedTouches[0]; joyMove(t.clientX,t.clientY); }, {passive:true});
+joyZone.addEventListener('touchend', joyEnd);
+joyZone.addEventListener('mousedown', e=> joyStart(e.clientX,e.clientY));
+window.addEventListener('mousemove', e=> joyMove(e.clientX,e.clientY));
+window.addEventListener('mouseup', joyEnd);
+
+/* shoot button */
+const shootBtn = document.getElementById('shootBtn');
+let shooting=false;
+function shootStart(){ shooting=true; shootBtn.classList.add('active'); }
+function shootStop(){ shooting=false; shootBtn.classList.remove('active'); }
+shootBtn.addEventListener('touchstart', e=>{ e.preventDefault(); shootStart(); }, {passive:false});
+shootBtn.addEventListener('touchend', shootStop);
+shootBtn.addEventListener('mousedown', shootStart);
+window.addEventListener('mouseup', shootStop);
+
+/* ============ GAME LOOP ============ */
+const SPEED = 4.2; // マス/秒
+let lastT = performance.now();
+function tick(now){
+  const dt = Math.min(0.05,(now-lastT)/1000); lastT=now;
+  if(running){
+    if(joyVec.x!==0 || joyVec.y!==0){
+      me.x += joyVec.x*SPEED*dt;
+      me.y += joyVec.y*SPEED*dt;
+      me.x = Math.max(0.3, Math.min(COLS-0.3, me.x));
+      me.y = Math.max(0.3, Math.min(ROWS-0.3, me.y));
+      me.angle = Math.atan2(joyVec.y, joyVec.x);
+    }
+    if(shooting) paintInk();
+
+    const remain = battleEnd - Date.now();
+    document.getElementById('timer').textContent = Math.max(0,Math.ceil(remain/1000));
+    if(remain<=0) endBattle();
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+render();
+
+/* ============ NETWORK: join / listeners ============ */
+function listenTiles(){
+  onValue(ref(db, `rooms/${roomId}/tiles`), snap=>{
+    const val = snap.val() || {};
+    for(const k in val){ grid[k]=val[k]; }
+    updateScore();
+  });
+}
+function listenPlayers(){
+  onValue(ref(db, `rooms/${roomId}/players`), snap=>{
+    players = snap.val() || {};
+  });
+}
+async function ensureBattleEnd(){
+  const endRef = ref(db, `rooms/${roomId}/battleEnd`);
+  const result = await runTransaction(endRef, cur=>{
+    if(cur && cur > Date.now()-5000) return cur; // 既に進行中ならそのまま
+    return Date.now()+BATTLE_MS;
+  });
+  battleEnd = result.snapshot.val();
+  onValue(endRef, snap=>{ if(snap.val()) battleEnd = snap.val(); });
+}
+
+document.getElementById('teamA').onclick = ()=>{
+  myTeam='a';
+  document.getElementById('teamA').classList.add('selected');
+  document.getElementById('teamB').classList.remove('selected');
+};
+document.getElementById('teamB').onclick = ()=>{
+  myTeam='b';
+  document.getElementById('teamB').classList.add('selected');
+  document.getElementById('teamA').classList.remove('selected');
+};
+
+document.getElementById('joinBtn').onclick = async ()=>{
+  const statusEl = document.getElementById('lobbyStatus');
+  roomId = (document.getElementById('roomInput').value || 'room1').trim().replace(/[.#$\[\]/]/g,'_');
+  if(!myTeam){ statusEl.textContent='チームを選んでください'; return; }
+  if(!roomId){ statusEl.textContent='ルームIDを入力してください'; return; }
+  statusEl.textContent='接続中...';
+  me.team = myTeam;
+  me.x = myTeam==='a' ? 2 : COLS-3;
+  me.y = ROWS/2;
+
+  try{
+    // 既存タイルを取得(なければ全マス中立で初期化)
+    const tilesSnap = await get(ref(db, `rooms/${roomId}/tiles`));
+    if(!tilesSnap.exists()){
+      grid = new Array(COLS*ROWS).fill(0);
+    } else {
+      const val = tilesSnap.val();
+      for(const k in val) grid[k]=val[k];
+    }
+    listenTiles();
+    listenPlayers();
+    await ensureBattleEnd();
+
+    const myRef = ref(db, `rooms/${roomId}/players/${uid}`);
+    await set(myRef, {x:me.x,y:me.y,angle:0,team:me.team,ts:Date.now()});
+    onDisconnect(myRef).remove();
+
+    document.getElementById('lobby').style.display='none';
+    document.getElementById('hud').style.display='flex';
+    document.getElementById('controls').style.display='block';
+    running = true;
+  }catch(err){
+    statusEl.textContent='接続エラー: '+err.message;
+  }
+};
+
+function endBattle(){
+  running=false;
+  document.getElementById('controls').style.display='none';
+  document.getElementById('hud').style.display='none';
+  const {pa,pb} = updateScore();
+  const res = document.getElementById('result');
+  const title = document.getElementById('resultTitle');
+  const detail = document.getElementById('resultDetail');
+  if(pa===pb){ title.textContent='DRAW'; title.style.color='#fff'; }
+  else if(pa>pb){ title.textContent='オレンジ WIN!'; title.style.color=TEAM_COLOR.a; }
+  else { title.textContent='ティール WIN!'; title.style.color=TEAM_COLOR.b; }
+  detail.textContent = `オレンジ ${pa}% / ティール ${pb}%`;
+  res.style.display='flex';
+}
+
+document.getElementById('againBtn').onclick = ()=>{
+  location.reload();
 };
 </script>
 </body>
