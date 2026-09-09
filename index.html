@@ -3,148 +3,285 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>INK FIELD BATTLE</title>
+<title>LATE SHIFT — 深夜警備員</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; -webkit-user-select:none; touch-action:none; }
-  html, body { width:100%; height:100%; overflow:hidden; background:#0b0d13; font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif; }
-  #gameCanvas { display:block; position:absolute; top:0; left:0; }
+:root{
+  --bg:#07090a;
+  --panel:#101512;
+  --panel-edge:#1d2620;
+  --phosphor:#39d353;
+  --phosphor-dim:#1f7a34;
+  --amber:#e8a33d;
+  --danger:#c9425a;
+  --static:#4a524a;
+  --text:#c8ead0;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0; padding:0; width:100%; height:100%;
+  background:var(--bg); color:var(--text);
+  font-family:'Share Tech Mono', monospace;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+#app{
+  position:fixed; inset:0;
+  display:flex; flex-direction:column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.screen{
+  flex:1; display:none; flex-direction:column; min-height:0;
+  animation:fadeIn .4s ease;
+}
+.screen.active{display:flex;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-  /* --- Overlay: Lobby --- */
-  #lobby {
-    position:absolute; inset:0; z-index:50;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    background: radial-gradient(circle at 50% 20%, #1a1f2e 0%, #0b0d13 70%);
-    color:#fff; gap:18px; padding:24px;
-  }
-  #lobby h1 {
-    font-size:28px; letter-spacing:2px; font-weight:900;
-    background: linear-gradient(90deg,#F2622E,#1FB6A6);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,.4));
-  }
-  #lobby input {
-    width:220px; padding:12px 14px; border-radius:10px; border:2px solid #333c50;
-    background:#161b26; color:#fff; font-size:16px; text-align:center;
-  }
-  .teamRow { display:flex; gap:12px; }
-  .teamBtn {
-    width:100px; padding:14px 0; border-radius:12px; border:3px solid transparent;
-    font-weight:800; font-size:15px; color:#fff; cursor:pointer;
-  }
-  .teamBtn.a { background:#F2622E; }
-  .teamBtn.b { background:#1FB6A6; }
-  .teamBtn.selected { border-color:#fff; transform:scale(1.06); }
-  #joinBtn {
-    padding:14px 40px; border-radius:30px; border:none; font-size:17px; font-weight:900;
-    background:#fff; color:#111; letter-spacing:1px; box-shadow:0 4px 14px rgba(0,0,0,.4);
-  }
-  #joinBtn:active { transform:scale(0.96); }
-  #lobbyStatus { font-size:12px; color:#8a93a8; min-height:16px; }
+/* ---------- scanline / vignette overlay ---------- */
+#scan{
+  position:fixed; inset:0; pointer-events:none; z-index:50; mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px);
+}
+#vignette{
+  position:fixed; inset:0; pointer-events:none; z-index:49;
+  box-shadow: inset 0 0 18vw 4vw rgba(0,0,0,0.75);
+}
 
-  /* --- HUD --- */
-  #hud {
-    position:absolute; top:0; left:0; right:0; z-index:20;
-    display:flex; align-items:center; padding:10px 12px; gap:10px;
-    pointer-events:none;
-  }
-  #timer {
-    background:rgba(10,12,18,.75); color:#fff; font-weight:900; font-size:16px;
-    padding:6px 14px; border-radius:20px; min-width:56px; text-align:center;
-    border:1px solid rgba(255,255,255,.15);
-  }
-  #scoreBar {
-    flex:1; height:16px; border-radius:8px; overflow:hidden; display:flex;
-    background:#20242f; border:1px solid rgba(255,255,255,.15);
-  }
-  #scoreA { background:#F2622E; height:100%; width:50%; transition: width .25s; }
-  #scoreB { background:#1FB6A6; height:100%; width:50%; transition: width .25s; }
-  #pct { display:flex; justify-content:space-between; font-size:11px; color:#cfd4e0; padding:0 4px; }
+/* ---------- title screen ---------- */
+#screen-title{ align-items:center; justify-content:center; text-align:center; padding:24px; gap:18px; }
+.logo{
+  font-size:clamp(34px,10vw,54px); letter-spacing:6px; color:var(--phosphor);
+  text-shadow:0 0 6px var(--phosphor-dim), 0 0 18px rgba(57,211,83,0.35);
+  line-height:1.1;
+}
+.logo small{display:block; font-size:0.32em; letter-spacing:3px; color:var(--static); margin-top:8px;}
+.flavor{ max-width:320px; font-size:13px; line-height:1.7; color:var(--static); }
+.menu{ display:flex; flex-direction:column; gap:12px; width:100%; max-width:300px; margin-top:10px; }
+.btn{
+  appearance:none; border:1px solid var(--phosphor-dim); background:var(--panel);
+  color:var(--phosphor); font-family:inherit; font-size:16px; letter-spacing:2px;
+  padding:14px 16px; border-radius:2px; cursor:pointer; min-height:48px;
+}
+.btn:active{ background:var(--phosphor-dim); color:#04140a; }
+.btn.amber{ border-color:var(--amber); color:var(--amber); }
+.btn.amber:active{ background:var(--amber); color:#241400; }
+.btn.danger{ border-color:var(--danger); color:var(--danger); }
+.btn.danger:active{ background:var(--danger); color:#1a0509; }
+.btn:disabled{ opacity:0.35; }
+input.code-input{
+  appearance:none; width:100%; background:var(--panel); border:1px solid var(--panel-edge);
+  color:var(--phosphor); font-family:inherit; font-size:22px; letter-spacing:8px; text-align:center;
+  text-transform:uppercase; padding:14px; border-radius:2px; min-height:48px;
+}
+.hint{ font-size:11px; color:var(--static); letter-spacing:1px; }
+.error-text{ font-size:12px; color:var(--danger); min-height:16px; }
 
-  /* --- Result --- */
-  #result {
-    position:absolute; inset:0; z-index:60; display:none;
-    align-items:center; justify-content:center; flex-direction:column; gap:10px;
-    background:rgba(5,6,10,.9); color:#fff; text-align:center;
-  }
-  #result h2 { font-size:30px; font-weight:900; }
-  #result p { font-size:15px; color:#b9c0d1; }
-  #result button {
-    margin-top:14px; padding:12px 30px; border-radius:24px; border:none;
-    background:#fff; color:#111; font-weight:900; font-size:15px;
-  }
+/* ---------- lobby ---------- */
+#screen-lobby{ align-items:center; justify-content:center; text-align:center; padding:24px; gap:16px; }
+.room-code{
+  font-size:44px; letter-spacing:14px; color:var(--amber); border:1px dashed var(--amber);
+  padding:14px 10px; border-radius:2px;
+}
+.slot-row{ display:flex; gap:14px; width:100%; max-width:320px; }
+.slot{
+  flex:1; border:1px solid var(--panel-edge); background:var(--panel); border-radius:2px;
+  padding:14px 8px; font-size:12px; letter-spacing:1px;
+}
+.slot .dot{
+  width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:6px;
+  background:var(--static);
+}
+.slot.online .dot{ background:var(--phosphor); box-shadow:0 0 6px var(--phosphor); }
+.slot .role{ display:block; margin-top:6px; color:var(--text); font-size:14px; }
 
-  /* --- Controls --- */
-  #controls {
-    position:absolute; inset:0; z-index:15; pointer-events:none;
-  }
-  #joystickZone {
-    position:absolute; left:0; bottom:0; width:45%; height:45%;
-    pointer-events:auto;
-  }
-  #joystickBase {
-    position:absolute; width:110px; height:110px; border-radius:50%;
-    background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.25);
-    display:none;
-  }
-  #joystickStick {
-    position:absolute; width:50px; height:50px; border-radius:50%;
-    background:rgba(255,255,255,.5); border:2px solid rgba(255,255,255,.7);
-    display:none;
-  }
-  #shootBtn {
-    position:absolute; right:26px; bottom:36px; width:92px; height:92px; border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, #ffdcae, #F2622E 70%);
-    border:3px solid rgba(255,255,255,.6); pointer-events:auto;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:900; color:#4a1c00; font-size:13px; letter-spacing:1px;
-    box-shadow:0 6px 16px rgba(0,0,0,.4);
-  }
-  #shootBtn.active { transform:scale(0.92); filter:brightness(1.15); }
+/* ---------- game screen ---------- */
+#screen-game{ flex-direction:column; }
+#hud{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--panel-edge);
+  font-size:12px; letter-spacing:1px; flex-shrink:0;
+}
+#hud .stat{ display:flex; flex-direction:column; align-items:center; min-width:44px; }
+#hud .stat .v{ font-size:15px; color:var(--phosphor); }
+#hud .stat.power .v{ color:var(--amber); }
+#hud .stat.power.low .v{ color:var(--danger); animation:blink 0.6s infinite; }
+@keyframes blink{50%{opacity:0.2}}
+#hud .label{ color:var(--static); font-size:9px; letter-spacing:1px; }
+
+#viewport{
+  flex:1; position:relative; min-height:0; background:#000;
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+#office-view, #cam-view{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+}
+#cam-view{ display:none; flex-direction:column; }
+.cam-header{
+  position:absolute; top:8px; left:8px; right:8px; display:flex; justify-content:space-between;
+  font-size:11px; color:var(--phosphor); letter-spacing:2px; z-index:5;
+}
+.cam-header .rec{ color:var(--danger); }
+.cam-tabs{
+  position:absolute; bottom:8px; left:0; right:0; display:flex; justify-content:center; gap:6px; z-index:5;
+}
+.cam-tab{
+  border:1px solid var(--panel-edge); background:rgba(16,21,18,0.85); color:var(--static);
+  font-family:inherit; font-size:11px; padding:8px 10px; border-radius:2px; min-width:44px;
+}
+.cam-tab.active{ color:var(--phosphor); border-color:var(--phosphor-dim); }
+.cam-tab.alert{ color:var(--danger); border-color:var(--danger); animation:blink 0.5s infinite; }
+
+svg{ width:100%; height:100%; max-height:100%; }
+
+.door-flash{
+  position:absolute; inset:0; background:var(--danger); opacity:0; pointer-events:none; z-index:20;
+}
+.door-flash.on{ animation:doorFlash 0.9s infinite; }
+@keyframes doorFlash{0%,100%{opacity:0}50%{opacity:0.35}}
+
+#static-canvas{ position:absolute; inset:0; pointer-events:none; opacity:0; z-index:6; }
+#static-canvas.on{ opacity:0.18; }
+
+#partner-banner{
+  position:absolute; top:34px; left:8px; right:8px; font-size:11px; color:var(--static);
+  z-index:5; letter-spacing:1px; text-align:center;
+}
+
+#controls{
+  flex-shrink:0; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
+  padding:10px; background:var(--panel); border-top:1px solid var(--panel-edge);
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+}
+.ctrl-btn{
+  appearance:none; border:1px solid var(--panel-edge); background:#0c100d; color:var(--text);
+  font-family:inherit; font-size:12px; letter-spacing:1px; padding:14px 4px; border-radius:2px;
+  min-height:54px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+}
+.ctrl-btn .icon{ font-size:18px; }
+.ctrl-btn.active{ background:var(--phosphor-dim); color:#04140a; border-color:var(--phosphor); }
+.ctrl-btn.danger-active{ background:var(--danger); color:#1a0509; border-color:var(--danger); }
+
+#log{
+  position:absolute; left:8px; bottom:8px; font-size:10px; color:var(--phosphor-dim);
+  max-width:70%; z-index:5; line-height:1.5; pointer-events:none;
+}
+
+/* ---------- end screen ---------- */
+#screen-end{ align-items:center; justify-content:center; text-align:center; padding:24px; gap:14px; }
+#end-title{ font-size:30px; letter-spacing:4px; }
+#end-title.win{ color:var(--phosphor); text-shadow:0 0 10px var(--phosphor-dim); }
+#end-title.lose{ color:var(--danger); text-shadow:0 0 10px var(--danger); }
+#end-sub{ font-size:13px; color:var(--static); max-width:280px; }
+
+.jumpscare{
+  position:fixed; inset:0; background:#000; z-index:100; display:none;
+  align-items:center; justify-content:center;
+}
+.jumpscare.show{ display:flex; animation:jscareFlash 0.15s steps(2) 4; }
+@keyframes jscareFlash{ 0%,100%{background:#000} 50%{background:#3a0008} }
+.jumpscare svg{ width:70%; max-width:320px; }
+
+.hidden{ display:none !important; }
 </style>
 </head>
 <body>
+<div id="app">
 
-<canvas id="gameCanvas"></canvas>
+  <!-- TITLE -->
+  <section id="screen-title" class="screen active">
+    <div class="logo">LATE SHIFT<small>深夜0時〜朝6時 生存記録</small></div>
+    <p class="flavor">閉店後の店内に一人、いや二人。監視カメラで通路を見張り、近づいてきたら扉を閉めろ。電力は有限。朝6時のチャイムまで生き延びろ。</p>
+    <div class="menu">
+      <input id="name-input" class="code-input" style="font-size:16px;letter-spacing:2px;text-transform:none;" placeholder="ニックネーム" maxlength="10">
+      <button class="btn" id="btn-create">部屋を作る</button>
+      <input id="join-code" class="code-input" placeholder="コード入力" maxlength="4">
+      <button class="btn amber" id="btn-join">友達の部屋に入る</button>
+      <p class="error-text" id="title-error"></p>
+      <p class="hint">友達に4桁のコードを送って一緒に監視しよう</p>
+    </div>
+  </section>
 
-<div id="hud" style="display:none;">
-  <div id="timer">90</div>
-  <div>
-    <div id="scoreBar"><div id="scoreA"></div><div id="scoreB"></div></div>
-    <div id="pct"><span id="pctA">50%</span><span id="pctB">50%</span></div>
+  <!-- LOBBY -->
+  <section id="screen-lobby" class="screen">
+    <p class="hint">合言葉をシェア</p>
+    <div class="room-code" id="lobby-code">----</div>
+    <div class="slot-row">
+      <div class="slot" id="slot-p1"><span class="dot"></span>P1<span class="role" id="slot-p1-name">-</span></div>
+      <div class="slot" id="slot-p2"><span class="dot"></span>P2<span class="role" id="slot-p2-name">待機中</span></div>
+    </div>
+    <button class="btn" id="btn-ready">準備完了</button>
+    <p class="hint" id="lobby-status">相手を待っています…</p>
+    <button class="btn danger" id="btn-leave-lobby">部屋を出る</button>
+  </section>
+
+  <!-- GAME -->
+  <section id="screen-game" class="screen">
+    <div id="hud">
+      <div class="stat"><div class="v" id="hud-time">12:00 AM</div><div class="label">TIME</div></div>
+      <div class="stat power" id="hud-power-wrap"><div class="v" id="hud-power">100%</div><div class="label">POWER</div></div>
+      <div class="stat"><div class="v" id="hud-partner-status">●</div><div class="label" id="hud-partner-label">P2</div></div>
+    </div>
+    <div id="viewport">
+      <div id="office-view">
+        <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice">
+          <rect width="400" height="260" fill="#0a0d0a"/>
+          <rect x="0" y="200" width="400" height="60" fill="#0d130f"/>
+          <rect x="40" y="20" width="90" height="150" fill="#111611" stroke="#1d2620" stroke-width="2" id="door-l-frame"/>
+          <rect x="270" y="20" width="90" height="150" fill="#111611" stroke="#1d2620" stroke-width="2" id="door-r-frame"/>
+          <rect x="40" y="20" width="90" height="150" fill="var(--danger)" opacity="0" id="door-l-shut"/>
+          <rect x="270" y="20" width="90" height="150" fill="var(--danger)" opacity="0" id="door-r-shut"/>
+          <rect x="150" y="150" width="100" height="14" fill="#161c17"/>
+          <circle cx="200" cy="120" r="30" fill="#0e120f" stroke="#1d2620" stroke-width="1"/>
+        </svg>
+        <div class="door-flash" id="doorflash-l"></div>
+        <div class="door-flash" id="doorflash-r"></div>
+      </div>
+      <div id="cam-view">
+        <div class="cam-header"><span id="cam-name">CAM 1 — HALL</span><span class="rec">● REC</span></div>
+        <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" id="cam-svg">
+          <rect width="400" height="260" fill="#05070600"/>
+          <rect x="0" y="0" width="400" height="260" fill="#060907"/>
+          <rect x="0" y="150" width="400" height="110" fill="#0a0e0b"/>
+        </svg>
+        <canvas id="static-canvas"></canvas>
+        <div class="cam-tabs" id="cam-tabs"></div>
+      </div>
+      <div id="partner-banner"></div>
+      <div id="log"></div>
+    </div>
+    <div id="controls">
+      <button class="ctrl-btn" id="btn-door"><span class="icon">🚪</span><span id="door-label">扉を閉める</span></button>
+      <button class="ctrl-btn" id="btn-light"><span class="icon">💡</span><span>廊下灯</span></button>
+      <button class="ctrl-btn" id="btn-cam"><span class="icon">📷</span><span id="cam-btn-label">カメラ確認</span></button>
+    </div>
+  </section>
+
+  <!-- END -->
+  <section id="screen-end" class="screen">
+    <div id="end-title">-</div>
+    <p id="end-sub"></p>
+    <button class="btn" id="btn-restart">タイトルへ戻る</button>
+  </section>
+
+  <div id="scan"></div>
+  <div id="vignette"></div>
+
+  <div class="jumpscare" id="jumpscare">
+    <svg viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="90" fill="#0a0a0a"/>
+      <circle cx="65" cy="85" r="14" fill="#ff2b3d"/>
+      <circle cx="135" cy="85" r="14" fill="#ff2b3d"/>
+      <path d="M50 140 Q100 190 150 140 L150 150 Q100 200 50 150 Z" fill="#ff2b3d"/>
+    </svg>
   </div>
+
 </div>
 
-<div id="controls" style="display:none;">
-  <div id="joystickZone">
-    <div id="joystickBase"></div>
-    <div id="joystickStick"></div>
-  </div>
-  <div id="shootBtn">INK</div>
-</div>
-
-<div id="lobby">
-  <h1>INK FIELD BATTLE</h1>
-  <input id="roomInput" placeholder="ルームID (例: room1)" value="room1">
-  <div class="teamRow">
-    <div class="teamBtn a" id="teamA">オレンジ</div>
-    <div class="teamBtn b" id="teamB">ティール</div>
-  </div>
-  <button id="joinBtn">バトル開始</button>
-  <div id="lobbyStatus"></div>
-</div>
-
-<div id="result">
-  <h2 id="resultTitle">RESULT</h2>
-  <p id="resultDetail"></p>
-  <button id="againBtn">もう一度</button>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getDatabase, ref, set, update, onValue, onDisconnect, remove, get, runTransaction
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+/* ============ FIREBASE ============ */
 const firebaseConfig = {
   apiKey: "AIzaSyDWxhILNkj0RrOV248Bh2zoFZfNq2G-3N0",
   authDomain: "zoukin-kart.firebaseapp.com",
@@ -155,348 +292,418 @@ const firebaseConfig = {
   appId: "1:627298939041:web:3dafaed8c6d267f1d780e0",
   measurementId: "G-DDW4R9EXW5"
 };
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-/* ============ CONFIG ============ */
-const COLS = 14, ROWS = 20;              // フィールドの格子サイズ(軽量に保つ)
-const BATTLE_MS = 90000;                 // 90秒バトル
-const TEAM_COLOR = { a:'#F2622E', b:'#1FB6A6', n:'#3a4055' };
-const TEAM_COLOR_DARK = { a:'#c94d1f', b:'#159d90', n:'#2c3040' };
-const uid = 'p' + Math.random().toString(36).slice(2,9);
+/* ============ STATE ============ */
+const CLIENT_ID = 'c_' + Math.random().toString(36).slice(2,10);
+let ROOM = null;
+let MY_SLOT = null; // 'p1' or 'p2'
+let roomRef = null;
+let roomListener = null;
+let hostLoopHandle = null;
+let latestState = null;
+let currentCam = 0;
+const CAMS = [
+  {name:'CAM 1 — HALL', danger:0.34},
+  {name:'CAM 2 — KITCHEN', danger:0.33},
+  {name:'CAM 3 — STORAGE', danger:0.33}
+];
+const NIGHT_LENGTH_SEC = 240; // real seconds to reach 6AM
 
-let myTeam = null, roomId = null;
-let cellW=0, cellH=0, originX=0, originY=0;
-
-/* grid: 0=neutral,1=team a,2=team b */
-let grid = new Array(COLS*ROWS).fill(0);
-let pendingTileUpdates = {};
-
-let players = {}; // uid -> {x,y,angle,team,name}
-let me = { x: COLS/2, y: ROWS/2, angle:0, team:null };
-
-let battleEnd = 0;
-let running = false;
-
-/* ============ CANVAS SETUP ============ */
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-function resize(){
-  canvas.width = window.innerWidth * devicePixelRatio;
-  canvas.height = window.innerHeight * devicePixelRatio;
-  canvas.style.width = window.innerWidth+'px';
-  canvas.style.height = window.innerHeight+'px';
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-
-  const availW = window.innerWidth * 0.92;
-  const availH = window.innerHeight * 0.86;
-  cellW = Math.min(availW/COLS, availH/ROWS);
-  cellH = cellW;
-  originX = (window.innerWidth - cellW*COLS)/2;
-  originY = (window.innerHeight - cellH*ROWS)/2 + 14;
+const $ = id => document.getElementById(id);
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
 }
-window.addEventListener('resize', resize);
-resize();
-
-/* per-cell fixed "facet" shading so triangles look like low-poly terrain */
-const facetSeed = new Array(COLS*ROWS).fill(0).map(()=> (Math.random()*0.5)); // 0..0.5 darkness variance
-
-function idx(cx,cy){ return cy*COLS+cx; }
-
-/* ============ DRAW ============ */
-function shade(hex, amt){
-  // amt: -1..1 darken/lighten
-  const c = hex.replace('#','');
-  let r=parseInt(c.substr(0,2),16), g=parseInt(c.substr(2,2),16), b=parseInt(c.substr(4,2),16);
-  const f = amt<0 ? (v)=>v*(1+amt) : (v)=>v+(255-v)*amt;
-  r=Math.max(0,Math.min(255,f(r))); g=Math.max(0,Math.min(255,f(g))); b=Math.max(0,Math.min(255,f(b)));
-  return `rgb(${r|0},${g|0},${b|0})`;
+function logMsg(msg){
+  const el = $('log');
+  el.textContent = msg;
+  clearTimeout(logMsg._t);
+  logMsg._t = setTimeout(()=>{ if(el.textContent===msg) el.textContent=''; }, 3500);
 }
 
-function drawField(){
-  ctx.fillStyle = '#0b0d13';
-  ctx.fillRect(0,0,window.innerWidth, window.innerHeight);
+/* ============ TITLE / LOBBY ============ */
+function randCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c=''; for(let i=0;i<4;i++) c+=chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function myName(){
+  return ($('name-input').value || '').trim().slice(0,10) || '警備員';
+}
 
-  for(let cy=0; cy<ROWS; cy++){
-    for(let cx=0; cx<COLS; cx++){
-      const i = idx(cx,cy);
-      const team = grid[i]===1?'a':grid[i]===2?'b':'n';
-      const baseColor = TEAM_COLOR[team];
-      const x0 = originX+cx*cellW, y0 = originY+cy*cellH;
-      const x1 = x0+cellW, y1 = y0+cellH;
-      const facet = facetSeed[i];
+$('btn-create').onclick = async ()=>{
+  $('title-error').textContent='';
+  const code = randCode();
+  ROOM = code; MY_SLOT='p1';
+  roomRef = db.ref('lateshift_rooms/'+code);
+  const initial = {
+    hostId: CLIENT_ID,
+    status:'waiting',
+    outcome:null,
+    time:0,
+    power:100,
+    monster:{stage:0, target:null, cam:null, lastMove:Date.now()},
+    doors:{p1:false,p2:false},
+    lights:{p1:false,p2:false},
+    cams:{p1:false,p2:false},
+    players:{ p1:{name:myName(), online:true, ready:false}, p2:null },
+    createdAt: Date.now()
+  };
+  await roomRef.set(initial);
+  roomRef.onDisconnect().child('players/p1/online').set(false);
+  enterLobby();
+};
 
-      // triangle 1 (top-left) - lighter facet
-      ctx.beginPath();
-      ctx.moveTo(x0,y0); ctx.lineTo(x1,y0); ctx.lineTo(x0,y1); ctx.closePath();
-      ctx.fillStyle = shade(baseColor, 0.12 - facet*0.3);
-      ctx.fill();
+$('btn-join').onclick = async ()=>{
+  $('title-error').textContent='';
+  const code = ($('join-code').value||'').trim().toUpperCase();
+  if(code.length!==4){ $('title-error').textContent='4桁のコードを入力してください'; return; }
+  const ref = db.ref('lateshift_rooms/'+code);
+  const snap = await ref.once('value');
+  const val = snap.val();
+  if(!val){ $('title-error').textContent='その部屋は見つかりません'; return; }
+  if(val.players && val.players.p2 && val.players.p2.online){
+    $('title-error').textContent='部屋が満員です'; return;
+  }
+  if(val.status==='playing'){ $('title-error').textContent='すでにゲームが始まっています'; return; }
+  ROOM = code; MY_SLOT='p2';
+  roomRef = ref;
+  await roomRef.child('players/p2').set({name:myName(), online:true, ready:false});
+  roomRef.onDisconnect().child('players/p2/online').set(false);
+  enterLobby();
+};
 
-      // triangle 2 (bottom-right) - darker facet
-      ctx.beginPath();
-      ctx.moveTo(x1,y0); ctx.lineTo(x1,y1); ctx.lineTo(x0,y1); ctx.closePath();
-      ctx.fillStyle = shade(baseColor, -0.08 - facet*0.3);
-      ctx.fill();
+function enterLobby(){
+  show('screen-lobby');
+  $('lobby-code').textContent = ROOM;
+  if(roomListener) roomRef.off('value', roomListener);
+  roomListener = roomRef.on('value', snap=>{
+    const v = snap.val();
+    if(!v) return;
+    latestState = v;
+    updateLobbyUI(v);
+    if(v.status==='playing'){
+      startGameUI();
     }
-  }
-
-  // grid lines (subtle)
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-  ctx.lineWidth = 1;
-  for(let cx=0; cx<=COLS; cx++){
-    ctx.beginPath(); ctx.moveTo(originX+cx*cellW, originY); ctx.lineTo(originX+cx*cellW, originY+ROWS*cellH); ctx.stroke();
-  }
-  for(let cy=0; cy<=ROWS; cy++){
-    ctx.beginPath(); ctx.moveTo(originX, originY+cy*cellH); ctx.lineTo(originX+COLS*cellW, originY+cy*cellH); ctx.stroke();
-  }
-
-  // outer border (low-poly bevel look)
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(originX, originY, COLS*cellW, ROWS*cellH);
+  });
 }
 
-function drawPlayer(p, isMe){
-  const px = originX + p.x*cellW;
-  const py = originY + p.y*cellH;
-  const r = cellW*0.62;
-  const col = TEAM_COLOR[p.team] || '#fff';
-  const dark = TEAM_COLOR_DARK[p.team] || '#888';
-
-  ctx.save();
-  ctx.translate(px,py);
-  ctx.rotate(p.angle);
-
-  // triangular "player" polygon (arrow / low-poly boat shape)
-  ctx.beginPath();
-  ctx.moveTo(r,0);
-  ctx.lineTo(-r*0.7, r*0.65);
-  ctx.lineTo(-r*0.35,0);
-  ctx.lineTo(-r*0.7,-r*0.65);
-  ctx.closePath();
-  ctx.fillStyle = col;
-  ctx.fill();
-  ctx.strokeStyle = isMe ? '#fff' : dark;
-  ctx.lineWidth = isMe ? 2.5 : 1.5;
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function render(){
-  drawField();
-  for(const id in players){
-    if(id!==uid) drawPlayer(players[id], false);
+function updateLobbyUI(v){
+  const p1 = v.players && v.players.p1;
+  const p2 = v.players && v.players.p2;
+  $('slot-p1').classList.toggle('online', !!(p1 && p1.online));
+  $('slot-p2').classList.toggle('online', !!(p2 && p2.online));
+  $('slot-p1-name').textContent = p1 ? (p1.name + (p1.ready?' ✓':'')) : '-';
+  $('slot-p2-name').textContent = p2 ? (p2.name + (p2.ready?' ✓':'')) : '未参加';
+  const bothReady = p1 && p2 && p1.ready && p2.ready && p1.online && p2.online;
+  $('lobby-status').textContent = bothReady ? '間もなく開始します…' : (p2 ? '準備完了を待っています' : '相手の参加を待っています…');
+  if(bothReady && MY_SLOT==='p1'){
+    roomRef.update({status:'playing', time:0, power:100});
   }
-  drawPlayer(me, true);
-  requestAnimationFrame(render);
 }
 
-/* ============ INK PAINTING ============ */
-function paintInk(){
-  if(!running) return;
-  const team = me.team===  'a' ? 1 : 2;
-  const range = 1.7; // マス単位の噴射範囲
-  const cx = Math.round(me.x + Math.cos(me.angle)*0.9);
-  const cy = Math.round(me.y + Math.sin(me.angle)*0.9);
-  for(let dy=-1; dy<=1; dy++){
-    for(let dx=-1; dx<=1; dx++){
-      const gx = cx+dx, gy = cy+dy;
-      if(gx<0||gy<0||gx>=COLS||gy>=ROWS) continue;
-      const dist = Math.hypot(gx-me.x, gy-me.y);
-      if(dist>range) continue;
-      const i = idx(gx,gy);
-      if(grid[i]!==team){
-        grid[i]=team;
-        pendingTileUpdates[i]=team;
+$('btn-ready').onclick = ()=>{
+  roomRef.child('players/'+MY_SLOT+'/ready').set(true);
+  $('btn-ready').disabled = true;
+};
+
+$('btn-leave-lobby').onclick = ()=>{
+  cleanupRoom();
+  show('screen-title');
+};
+
+function cleanupRoom(){
+  if(roomListener && roomRef) roomRef.off('value', roomListener);
+  if(hostLoopHandle) clearInterval(hostLoopHandle);
+  hostLoopHandle=null;
+  if(roomRef && MY_SLOT){
+    roomRef.child('players/'+MY_SLOT+'/online').set(false);
+  }
+  roomRef=null; ROOM=null; MY_SLOT=null; latestState=null;
+}
+
+/* ============ GAME ============ */
+function startGameUI(){
+  show('screen-game');
+  buildCamTabs();
+  renderCamView();
+  if(!hostLoopHandle && latestState && latestState.hostId===CLIENT_ID){
+    hostLoopHandle = setInterval(hostTick, 1000);
+  }
+}
+
+function buildCamTabs(){
+  const wrap = $('cam-tabs');
+  wrap.innerHTML='';
+  CAMS.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.className='cam-tab'; b.textContent='CAM '+(i+1);
+    b.onclick=()=>{ currentCam=i; renderCamView(); };
+    wrap.appendChild(b);
+  });
+}
+
+/* -------- HOST simulation loop -------- */
+function hostTick(){
+  if(!latestState || latestState.status!=='playing') return;
+  const v = latestState;
+  const updates = {};
+
+  // time progression
+  const newTime = Math.min(360, v.time + (360/NIGHT_LENGTH_SEC));
+  updates.time = newTime;
+
+  // power drain
+  let drain = 0.10; // base
+  if(v.doors && v.doors.p1) drain += 0.16;
+  if(v.doors && v.doors.p2) drain += 0.16;
+  if(v.cams && v.cams.p1) drain += 0.05;
+  if(v.cams && v.cams.p2) drain += 0.05;
+  const newPower = Math.max(0, v.power - drain);
+  updates.power = newPower;
+
+  // monster AI
+  let m = v.monster || {stage:0,target:null,cam:null,lastMove:0};
+  const now = Date.now();
+  const moveInterval = 3200 - Math.min(1800, v.time*4); // speeds up as night goes on
+  if(now - (m.lastMove||0) > moveInterval){
+    m = {...m, lastMove: now};
+    if(m.stage===0){
+      // start approach toward a random player
+      m.target = Math.random()<0.5 ? 'p1':'p2';
+      m.cam = Math.floor(Math.random()*CAMS.length);
+      m.stage = 1;
+    } else if(m.stage < 3){
+      m.stage += 1;
+      m.cam = Math.floor(Math.random()*CAMS.length);
+    } else if(m.stage===3){
+      // arrives at target's door
+      m.stage = 4;
+      m.cam = null;
+    } else if(m.stage===4){
+      const doorClosed = v.doors && v.doors[m.target];
+      if(doorClosed){
+        // repelled, costs power, resets
+        updates.power = Math.max(0, (updates.power!==undefined?updates.power:v.power) - 6);
+        m = {stage:0, target:null, cam:null, lastMove:now};
+      } else {
+        // jumpscare -> lose
+        updates.status='over';
+        updates.outcome='lose';
+        updates.loseTarget=m.target;
       }
     }
   }
-  updateScore();
-}
+  updates.monster = m;
 
-function updateScore(){
-  let a=0,b=0,total=grid.length;
-  for(const v of grid){ if(v===1)a++; else if(v===2)b++; }
-  const pa = Math.round(a/total*100), pb = Math.round(b/total*100);
-  document.getElementById('scoreA').style.width = pa+'%';
-  document.getElementById('scoreB').style.width = pb+'%';
-  document.getElementById('pctA').textContent = 'A '+pa+'%';
-  document.getElementById('pctB').textContent = 'B '+pb+'%';
-  return {pa,pb};
-}
-
-/* flush tile updates to firebase periodically (throttled = 軽量) */
-setInterval(()=>{
-  if(!running) return;
-  const keys = Object.keys(pendingTileUpdates);
-  if(keys.length===0) return;
-  const payload = {};
-  for(const k of keys) payload[k]=pendingTileUpdates[k];
-  pendingTileUpdates = {};
-  update(ref(db, `rooms/${roomId}/tiles`), payload).catch(()=>{});
-}, 150);
-
-/* push my player state periodically */
-setInterval(()=>{
-  if(!running) return;
-  set(ref(db, `rooms/${roomId}/players/${uid}`), {
-    x: me.x, y: me.y, angle: me.angle, team: me.team, ts: Date.now()
-  }).catch(()=>{});
-}, 100);
-
-/* ============ INPUT: virtual joystick ============ */
-const joyZone = document.getElementById('joystickZone');
-const joyBase = document.getElementById('joystickBase');
-const joyStick = document.getElementById('joystickStick');
-let joyActive=false, joyCenter={x:0,y:0}, joyVec={x:0,y:0};
-
-function joyStart(x,y){
-  joyActive=true;
-  joyCenter={x,y};
-  joyBase.style.left=(x-55)+'px'; joyBase.style.top=(y-55)+'px'; joyBase.style.display='block';
-  joyStick.style.left=(x-25)+'px'; joyStick.style.top=(y-25)+'px'; joyStick.style.display='block';
-}
-function joyMove(x,y){
-  if(!joyActive) return;
-  let dx=x-joyCenter.x, dy=y-joyCenter.y;
-  const dist=Math.hypot(dx,dy), max=55;
-  if(dist>max){ dx=dx/dist*max; dy=dy/dist*max; }
-  joyStick.style.left=(joyCenter.x+dx-25)+'px'; joyStick.style.top=(joyCenter.y+dy-25)+'px';
-  joyVec = { x: dx/max, y: dy/max };
-}
-function joyEnd(){
-  joyActive=false; joyVec={x:0,y:0};
-  joyBase.style.display='none'; joyStick.style.display='none';
-}
-joyZone.addEventListener('touchstart', e=>{ const t=e.changedTouches[0]; joyStart(t.clientX,t.clientY); }, {passive:true});
-joyZone.addEventListener('touchmove', e=>{ const t=e.changedTouches[0]; joyMove(t.clientX,t.clientY); }, {passive:true});
-joyZone.addEventListener('touchend', joyEnd);
-joyZone.addEventListener('mousedown', e=> joyStart(e.clientX,e.clientY));
-window.addEventListener('mousemove', e=> joyMove(e.clientX,e.clientY));
-window.addEventListener('mouseup', joyEnd);
-
-/* shoot button */
-const shootBtn = document.getElementById('shootBtn');
-let shooting=false;
-function shootStart(){ shooting=true; shootBtn.classList.add('active'); }
-function shootStop(){ shooting=false; shootBtn.classList.remove('active'); }
-shootBtn.addEventListener('touchstart', e=>{ e.preventDefault(); shootStart(); }, {passive:false});
-shootBtn.addEventListener('touchend', shootStop);
-shootBtn.addEventListener('mousedown', shootStart);
-window.addEventListener('mouseup', shootStop);
-
-/* ============ GAME LOOP ============ */
-const SPEED = 4.2; // マス/秒
-let lastT = performance.now();
-function tick(now){
-  const dt = Math.min(0.05,(now-lastT)/1000); lastT=now;
-  if(running){
-    if(joyVec.x!==0 || joyVec.y!==0){
-      me.x += joyVec.x*SPEED*dt;
-      me.y += joyVec.y*SPEED*dt;
-      me.x = Math.max(0.3, Math.min(COLS-0.3, me.x));
-      me.y = Math.max(0.3, Math.min(ROWS-0.3, me.y));
-      me.angle = Math.atan2(joyVec.y, joyVec.x);
-    }
-    if(shooting) paintInk();
-
-    const remain = battleEnd - Date.now();
-    document.getElementById('timer').textContent = Math.max(0,Math.ceil(remain/1000));
-    if(remain<=0) endBattle();
+  if(newPower<=0 && updates.status!=='over'){
+    updates.status='over';
+    updates.outcome='lose';
+    updates.loseTarget='blackout';
   }
-  requestAnimationFrame(tick);
-}
-requestAnimationFrame(tick);
-render();
+  if(newTime>=360 && updates.status!=='over'){
+    updates.status='over';
+    updates.outcome='win';
+  }
 
-/* ============ NETWORK: join / listeners ============ */
-function listenTiles(){
-  onValue(ref(db, `rooms/${roomId}/tiles`), snap=>{
-    const val = snap.val() || {};
-    for(const k in val){ grid[k]=val[k]; }
-    updateScore();
-  });
-}
-function listenPlayers(){
-  onValue(ref(db, `rooms/${roomId}/players`), snap=>{
-    players = snap.val() || {};
-  });
-}
-async function ensureBattleEnd(){
-  const endRef = ref(db, `rooms/${roomId}/battleEnd`);
-  const result = await runTransaction(endRef, cur=>{
-    if(cur && cur > Date.now()-5000) return cur; // 既に進行中ならそのまま
-    return Date.now()+BATTLE_MS;
-  });
-  battleEnd = result.snapshot.val();
-  onValue(endRef, snap=>{ if(snap.val()) battleEnd = snap.val(); });
+  roomRef.update(updates);
 }
 
-document.getElementById('teamA').onclick = ()=>{
-  myTeam='a';
-  document.getElementById('teamA').classList.add('selected');
-  document.getElementById('teamB').classList.remove('selected');
+/* -------- render loop driven by DB changes -------- */
+function onStateChange(v){
+  latestState = v;
+  if(!v) return;
+  if(v.status==='playing' && !$('screen-game').classList.contains('active')){
+    startGameUI();
+  }
+  if(v.status==='playing'){
+    renderHUD(v);
+    renderOffice(v);
+    if($('cam-view').style.display==='flex') renderCamView(v);
+  } else if(v.status==='over'){
+    if(hostLoopHandle){ clearInterval(hostLoopHandle); hostLoopHandle=null; }
+    showEnd(v);
+  }
+}
+
+function fmtTime(t){
+  // t: 0..360 minutes representing 12:00AM..6:00AM
+  const totalMin = Math.floor(t);
+  let hour = Math.floor(totalMin/60); // 0..6
+  let min = totalMin%60;
+  let displayHour = hour===0?12:hour;
+  let ampm = 'AM';
+  return `${displayHour}:${String(min).padStart(2,'0')} ${ampm}`;
+}
+
+function renderHUD(v){
+  $('hud-time').textContent = fmtTime(v.time);
+  $('hud-power').textContent = Math.round(v.power)+'%';
+  $('hud-power-wrap').classList.toggle('low', v.power<20);
+  const partnerSlot = MY_SLOT==='p1'?'p2':'p1';
+  const partner = v.players && v.players[partnerSlot];
+  $('hud-partner-label').textContent = partnerSlot.toUpperCase();
+  $('hud-partner-status').style.color = (partner && partner.online) ? 'var(--phosphor)' : 'var(--danger)';
+  $('partner-banner').textContent = (partner && partner.online) ? '' : '⚠ 相方が離脱中 — 一人で両方の扉を守れ';
+}
+
+function renderOffice(v){
+  const myDoor = v.doors && v.doors[MY_SLOT];
+  const partnerSlot = MY_SLOT==='p1'?'p2':'p1';
+  const partnerDoor = v.doors && v.doors[partnerSlot];
+  $('door-l-shut').setAttribute('opacity', (MY_SLOT==='p1'?myDoor:partnerDoor) ? '0.85':'0');
+  $('door-r-shut').setAttribute('opacity', (MY_SLOT==='p1'?partnerDoor:myDoor) ? '0.85':'0');
+
+  const m = v.monster||{};
+  const atMyDoor = m.stage===4 && m.target===MY_SLOT;
+  const atPartnerDoor = m.stage===4 && m.target===partnerSlot;
+  $('doorflash-l').classList.toggle('on', MY_SLOT==='p1'? atMyDoor: atPartnerDoor);
+  $('doorflash-r').classList.toggle('on', MY_SLOT==='p1'? atPartnerDoor: atMyDoor);
+
+  $('door-label').textContent = myDoor ? '扉を開ける' : '扉を閉める';
+  $('btn-door').classList.toggle('danger-active', atMyDoor);
+
+  // camera tab alert state
+  document.querySelectorAll('.cam-tab').forEach((tab,i)=>{
+    tab.classList.toggle('alert', m.stage>=1 && m.stage<=3 && m.cam===i);
+  });
+}
+
+let staticAnimHandle=null;
+function drawStatic(){
+  const canvas=$('static-canvas');
+  if(!canvas.width){ canvas.width=400; canvas.height=260; }
+  const ctx=canvas.getContext('2d');
+  const imgData=ctx.createImageData(canvas.width,canvas.height);
+  for(let i=0;i<imgData.data.length;i+=4){
+    const g=Math.random()*255;
+    imgData.data[i]=g;imgData.data[i+1]=g;imgData.data[i+2]=g;imgData.data[i+3]=255;
+  }
+  ctx.putImageData(imgData,0,0);
+}
+function staticLoop(){
+  drawStatic();
+  staticAnimHandle=requestAnimationFrame(staticLoop);
+}
+
+function renderCamView(v){
+  v = v||latestState;
+  if(!v) return;
+  $('cam-name').textContent = CAMS[currentCam].name;
+  document.querySelectorAll('.cam-tab').forEach((t,i)=>t.classList.toggle('active', i===currentCam));
+  const svg = $('cam-svg');
+  // remove previous monster silhouette
+  const old = svg.querySelector('#monster-shape');
+  if(old) old.remove();
+  const m = v.monster||{};
+  if(m.stage>=1 && m.stage<=3 && m.cam===currentCam){
+    const ns='http://www.w3.org/2000/svg';
+    const g=document.createElementNS(ns,'g');
+    g.setAttribute('id','monster-shape');
+    const scale = 0.6 + m.stage*0.22;
+    const cx = 200, cy = 150 - (m.stage*10);
+    g.innerHTML = `
+      <ellipse cx="${cx}" cy="${cy+40*scale}" rx="${34*scale}" ry="${54*scale}" fill="#04140a" stroke="#0f2b18" stroke-width="2"/>
+      <circle cx="${cx}" cy="${cy}" r="${26*scale}" fill="#04140a" stroke="#0f2b18" stroke-width="2"/>
+      <circle cx="${cx-9*scale}" cy="${cy-3*scale}" r="${4*scale}" fill="#39d353"/>
+      <circle cx="${cx+9*scale}" cy="${cy-3*scale}" r="${4*scale}" fill="#39d353"/>
+    `;
+    svg.appendChild(g);
+  }
+}
+
+/* ============ CONTROLS ============ */
+$('btn-door').onclick = ()=>{
+  if(!latestState) return;
+  const cur = !!(latestState.doors && latestState.doors[MY_SLOT]);
+  roomRef.child('doors/'+MY_SLOT).set(!cur);
 };
-document.getElementById('teamB').onclick = ()=>{
-  myTeam='b';
-  document.getElementById('teamB').classList.add('selected');
-  document.getElementById('teamA').classList.remove('selected');
+$('btn-light').onclick = ()=>{
+  if(!latestState) return;
+  const cur = !!(latestState.lights && latestState.lights[MY_SLOT]);
+  roomRef.child('lights/'+MY_SLOT).set(!cur);
+  $('btn-light').classList.toggle('active', !cur);
 };
-
-document.getElementById('joinBtn').onclick = async ()=>{
-  const statusEl = document.getElementById('lobbyStatus');
-  roomId = (document.getElementById('roomInput').value || 'room1').trim().replace(/[.#$\[\]/]/g,'_');
-  if(!myTeam){ statusEl.textContent='チームを選んでください'; return; }
-  if(!roomId){ statusEl.textContent='ルームIDを入力してください'; return; }
-  statusEl.textContent='接続中...';
-  me.team = myTeam;
-  me.x = myTeam==='a' ? 2 : COLS-3;
-  me.y = ROWS/2;
-
-  try{
-    // 既存タイルを取得(なければ全マス中立で初期化)
-    const tilesSnap = await get(ref(db, `rooms/${roomId}/tiles`));
-    if(!tilesSnap.exists()){
-      grid = new Array(COLS*ROWS).fill(0);
-    } else {
-      const val = tilesSnap.val();
-      for(const k in val) grid[k]=val[k];
-    }
-    listenTiles();
-    listenPlayers();
-    await ensureBattleEnd();
-
-    const myRef = ref(db, `rooms/${roomId}/players/${uid}`);
-    await set(myRef, {x:me.x,y:me.y,angle:0,team:me.team,ts:Date.now()});
-    onDisconnect(myRef).remove();
-
-    document.getElementById('lobby').style.display='none';
-    document.getElementById('hud').style.display='flex';
-    document.getElementById('controls').style.display='block';
-    running = true;
-  }catch(err){
-    statusEl.textContent='接続エラー: '+err.message;
+$('btn-cam').onclick = ()=>{
+  const camView = $('cam-view');
+  const officeView = $('office-view');
+  const isOpen = camView.style.display==='flex';
+  if(isOpen){
+    camView.style.display='none';
+    officeView.style.display='flex';
+    $('cam-btn-label').textContent='カメラ確認';
+    $('btn-cam').classList.remove('active');
+    if(staticAnimHandle){ cancelAnimationFrame(staticAnimHandle); staticAnimHandle=null; }
+    $('static-canvas').classList.remove('on');
+    roomRef.child('cams/'+MY_SLOT).set(false);
+  } else {
+    camView.style.display='flex';
+    officeView.style.display='none';
+    $('cam-btn-label').textContent='モニターを閉じる';
+    $('btn-cam').classList.add('active');
+    $('static-canvas').classList.add('on');
+    staticLoop();
+    roomRef.child('cams/'+MY_SLOT).set(true);
+    renderCamView();
   }
 };
 
-function endBattle(){
-  running=false;
-  document.getElementById('controls').style.display='none';
-  document.getElementById('hud').style.display='none';
-  const {pa,pb} = updateScore();
-  const res = document.getElementById('result');
-  const title = document.getElementById('resultTitle');
-  const detail = document.getElementById('resultDetail');
-  if(pa===pb){ title.textContent='DRAW'; title.style.color='#fff'; }
-  else if(pa>pb){ title.textContent='オレンジ WIN!'; title.style.color=TEAM_COLOR.a; }
-  else { title.textContent='ティール WIN!'; title.style.color=TEAM_COLOR.b; }
-  detail.textContent = `オレンジ ${pa}% / ティール ${pb}%`;
-  res.style.display='flex';
+/* ============ END SCREEN ============ */
+function showEnd(v){
+  show('screen-end');
+  const win = v.outcome==='win';
+  const t = $('end-title');
+  t.textContent = win ? 'AM 6:00 — 生存' : 'GAME OVER';
+  t.className = win? 'win':'lose';
+  if(win){
+    $('end-sub').textContent = '夜勤お疲れ様。二人とも朝を迎えた。';
+  } else if(v.loseTarget==='blackout'){
+    $('end-sub').textContent = '電力切れ。暗闇の中、何かが近づいてくる音がした…';
+    triggerJumpscare();
+  } else {
+    const who = v.loseTarget===MY_SLOT ? 'あなたの' : '相方の';
+    $('end-sub').textContent = who+'扉が破られた。';
+    if(v.loseTarget===MY_SLOT) triggerJumpscare();
+  }
+}
+function triggerJumpscare(){
+  const j=$('jumpscare');
+  j.classList.add('show');
+  setTimeout(()=>j.classList.remove('show'), 700);
+}
+$('btn-restart').onclick = ()=>{
+  cleanupRoom();
+  $('btn-ready').disabled=false;
+  show('screen-title');
+};
+
+/* ============ subscribe to state changes globally once in game ============ */
+function attachGameListener(){
+  if(!roomRef) return;
+  roomRef.off('value', roomListener);
+  roomListener = roomRef.on('value', snap=>{ onStateChange(snap.val()); });
 }
 
-document.getElementById('againBtn').onclick = ()=>{
-  location.reload();
+// override lobby->game transition to attach full listener
+const _origEnterLobby = enterLobby;
+enterLobby = function(){
+  show('screen-lobby');
+  $('lobby-code').textContent = ROOM;
+  if(roomListener) roomRef.off('value', roomListener);
+  roomListener = roomRef.on('value', snap=>{
+    const v = snap.val();
+    if(!v) return;
+    latestState = v;
+    if(v.status==='waiting'){
+      updateLobbyUI(v);
+    } else if(v.status==='playing'){
+      attachGameListener();
+      startGameUI();
+      onStateChange(v);
+    }
+  });
 };
 </script>
 </body>
